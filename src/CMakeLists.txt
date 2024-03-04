@@ -5,7 +5,7 @@ PROJECT(engine)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_executable(engine engine.cpp)
+add_executable(engine engine.cpp tinyxml2.cpp)
 
 add_executable(generator generator.cpp tinyxml2.cpp)
 
