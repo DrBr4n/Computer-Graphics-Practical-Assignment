@@ -1,10 +1,45 @@
 #include "tinyxml2.h"
 #include <GL/gl.h>
 #include <GL/glut.h>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
 // guide: https://shilohjames.wordpress.com/2014/04/27/tinyxml2-tutorial/
 using namespace tinyxml2;
 using namespace std;
+
+void genPlane(float length, int divisions) {
+  ostringstream fileName;
+  fileName << "../3d/plane_" << length << "_" << divisions << ".3d";
+  ofstream File(fileName.str(), ios::trunc);
+
+  int fixDiv = 0;
+  float ofset = 0;
+  if (divisions % 2 == 1) {
+    fixDiv = 1;
+    ofset = length / 2;
+  }
+
+  for (int i = -divisions / 2 - fixDiv; i < divisions / 2; i++) {
+    for (int j = -divisions / 2 - fixDiv; j < divisions / 2; j++) {
+      File << length * j + ofset << " " << 0.0f << " " << length * i + ofset
+           << endl;
+      File << length * j + ofset << " " << 0.0f << " "
+           << length * (i + 1) + ofset << endl;
+      File << length * (j + 1) + ofset << " " << 0.0f << " "
+           << length * i + ofset << endl;
+      File << length * j + ofset << " " << 0.0f << " "
+           << length * (i + 1) + ofset << endl;
+      File << length * (j + 1) + ofset << " " << 0.0f << " "
+           << length * (i + 1) + ofset << endl;
+      File << length * (j + 1) + ofset << " " << 0.0f << " "
+           << length * i + ofset << endl;
+    }
+  }
+
+  File.close();
+}
 
 void generateConfig() {
   XMLDocument xmlDoc;
@@ -74,6 +109,15 @@ void generateConfig() {
 int main(int argc, char *argv[]) {
 
   // generateConfig();
+
+  if (strcmp(argv[1], "plane") == 0) {
+    cout << argv[1];
+    if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
+      genPlane(stof(argv[2]), stoi(argv[3]));
+    } else
+      cout << "Invalid length(float) or divisions(int)." << endl;
+  } else
+    cout << "Invalid model (available: plane)" << endl;
 
   return 1;
 }
