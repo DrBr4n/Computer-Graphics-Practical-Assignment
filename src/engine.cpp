@@ -2,6 +2,13 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
+#include <algorithm>
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 using namespace tinyxml2;
 using namespace std;
@@ -18,6 +25,7 @@ struct State {
   GLfloat beta;
   GLfloat gamma;
   GLfloat scale;
+  vector<Vector> vectors;
 } state;
 
 struct Camera {
@@ -149,6 +157,23 @@ void drawPlane(float length, int divisions) {
   glEnd();
 }
 
+void readModel(char *fileName) {
+
+  ifstream File(fileName);
+  string line;
+
+  while (getline(File, line)) {
+    istringstream lineStream(line);
+    Vector vector3d;
+    lineStream >> vector3d.x;
+    lineStream >> vector3d.y;
+    lineStream >> vector3d.z;
+    state.vectors.push_back(vector3d);
+  }
+
+  File.close();
+}
+
 void renderScene(void) {
   // Clear buffers
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -158,7 +183,8 @@ void renderScene(void) {
   gluLookAt(camera.position.x, camera.position.y, camera.position.z,
             camera.lookAt.x, camera.lookAt.y, camera.lookAt.z, camera.up.x,
             camera.up.y, camera.up.z);
-  // gluPerspective(camera.fov, 1.0, camera.near, camera.far);
+  // gluPerspective(camera.fov, camera.width * 1.0 / camera.height, camera.near,
+  // camera.far);
 
   drawAxes();
 
@@ -169,8 +195,15 @@ void renderScene(void) {
   glRotatef(state.gamma, 0.0f, 0.0f, 1.0f);
   glScalef(state.scale, state.scale, state.scale);
 
+  glColor3f(1.0f, 1.0f, 1.0f);
   // Drawings
-  drawPlane(2, 3);
+  // drawPlane(2, 3);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glBegin(GL_TRIANGLES);
+  for (Vector vectorToDraw : state.vectors) {
+    glVertex3f(vectorToDraw.x, vectorToDraw.y, vectorToDraw.z);
+  }
+  glEnd();
 
   // End of frame
   glutSwapBuffers();
@@ -235,6 +268,7 @@ int main(int argc, char **argv) {
 
   initState();
   readConfig("../tests/test_files_phase_1/test_1_5.xml");
+  readModel(argv[1]);
 
   // Init GLUT and the window
   glutInit(&argc, argv);
