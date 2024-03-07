@@ -5,12 +5,19 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 // guide: https://shilohjames.wordpress.com/2014/04/27/tinyxml2-tutorial/
 using namespace tinyxml2;
 using namespace std;
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+struct Point3D {
+  GLfloat x;
+  GLfloat y;
+  GLfloat z;
+};
 
 void genPlane(float length, int divisions) {
   ostringstream fileName;
@@ -312,6 +319,65 @@ void genCone(float radius, float height, int slices, int stacks) {
   }
 }
 
+void genSphere(float radius, int slices, int stacks) {
+
+  ostringstream fileName;
+  fileName << "../3d/sphere_" << radius << "_" << slices << "_" << stacks
+           << ".3d";
+  ofstream File(fileName.str(), ios::trunc);
+
+  vector<Point3D> spherePoints;
+  float sliceAngle, stackAngle;
+  float sliceStep = 2 * M_PI / slices;
+  float stackStep = M_PI / stacks;
+  Point3D point;
+
+  for (int i = 0; i <= stacks; i++) {
+    stackAngle = M_PI / 2 - i * stackStep;
+    point.y = radius * sinf(stackAngle);
+    for (int j = 0; j <= slices; j++) {
+      sliceAngle = j * sliceStep;
+      point.x = (radius * cosf(stackAngle)) * sinf(sliceAngle);
+      point.z = (radius * cosf(stackAngle)) * cosf(sliceAngle);
+      spherePoints.push_back(point);
+    }
+  }
+
+  Point3D p1, p2, p3, p4;
+  int pi1, pi2;
+  for (int i = 0; i < stacks; i++) {
+    pi1 = i * (slices + 1);
+    pi2 = (i + 1) * (slices + 1);
+    for (int j = 0; j < slices; j++, pi1++, pi2++) {
+      // Get 4 points per slice
+      // p1 - p3
+      // p2 - p4
+      p1 = spherePoints[pi1];
+      p2 = spherePoints[pi2];
+      p3 = spherePoints[pi1 + 1];
+      p4 = spherePoints[pi2 + 1];
+
+      if (i == 0) { // Top stack
+        File << p1.x << " " << p1.y << " " << p1.z << endl;
+        File << p2.x << " " << p2.y << " " << p2.z << endl;
+        File << p4.x << " " << p4.y << " " << p4.z << endl;
+      } else if (i == (stacks - 1)) { // Bottom Stack
+        File << p1.x << " " << p1.y << " " << p1.z << endl;
+        File << p2.x << " " << p2.y << " " << p2.z << endl;
+        File << p3.x << " " << p3.y << " " << p3.z << endl;
+      } else { // The other stacks need 2 triangles
+        File << p3.x << " " << p3.y << " " << p3.z << endl;
+        File << p1.x << " " << p1.y << " " << p1.z << endl;
+        File << p2.x << " " << p2.y << " " << p2.z << endl;
+
+        File << p3.x << " " << p3.y << " " << p3.z << endl;
+        File << p2.x << " " << p2.y << " " << p2.z << endl;
+        File << p4.x << " " << p4.y << " " << p4.z << endl;
+      }
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   // generateConfig();
@@ -330,6 +396,9 @@ int main(int argc, char *argv[]) {
 
   } else if (strcmp(argv[1], "cone") == 0) {
     genCone(stof(argv[2]), stoi(argv[3]), stoi(argv[4]), stoi(argv[5]));
+
+  } else if (strcmp(argv[1], "sphere") == 0) {
+    genSphere(stof(argv[2]), stoi(argv[3]), stoi(argv[4]));
 
     return 1;
   }
