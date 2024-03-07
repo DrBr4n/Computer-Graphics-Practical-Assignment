@@ -105,6 +105,124 @@ void generateConfig() {
 
   xmlDoc.SaveFile("config.xml");
 }
+void genBox(float length, int divisions) {
+
+  ostringstream fileName;
+  fileName << "../3d/box_" << length << "_" << divisions << ".3d";
+  ofstream File(fileName.str(), ios::trunc);
+
+  float start = -length / 2.0f;
+  // BASE
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+      File << j * (length / divisions) + start << " " << start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << j * (length / divisions) + start << " " << start << " "
+           << i * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << start << " "
+           << i * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << j * (length / divisions) + start << " " << start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << start << " "
+           << i * (length / divisions) + start << endl;
+    }
+  }
+
+  // TOPO
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+      File << j * (length / divisions) + start << " " << -start << " "
+           << i * (length / divisions) + start << endl;
+      File << j * (length / divisions) + start << " " << -start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << -start << " "
+           << i * (length / divisions) + start << endl;
+      File << j * (length / divisions) + start << " " << -start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << -start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << (j + 1) * (length / divisions) + start << " " << -start << " "
+           << i * (length / divisions) + start << endl;
+    }
+  }
+
+  // Lateral Frontal
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+
+      File << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << -start << endl;
+      File << (j + 1) * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << -start << endl;
+      File << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << -start << endl;
+      File << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << -start << endl;
+      File << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << -start << endl;
+      File << j * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << -start << endl;
+    }
+  }
+
+  // Lateral Traseiro
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+      File << (j + 1) * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << start << endl;
+      File << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << start << endl;
+      File << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << start << endl;
+      File << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << start << endl;
+      File << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << " " << start << endl;
+      File << j * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << " " << start << endl;
+    }
+  }
+
+  // Lateral Direito
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+
+      File << -start << " " << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << -start << " " << (j + 1) * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << -start << " " << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << -start << " " << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << -start << " " << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << -start << " " << j * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+    }
+  }
+
+  // Lateral Esquerdo
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+
+      File << start << " " << (j + 1) * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << start << " " << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << start << " " << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << start << " " << (j + 1) * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+      File << start << " " << j * (length / divisions) + start << " "
+           << i * (length / divisions) + start << endl;
+      File << start << " " << j * (length / divisions) + start << " "
+           << (i + 1) * (length / divisions) + start << endl;
+    }
+  }
+}
 
 int main(int argc, char *argv[]) {
 
@@ -116,8 +234,15 @@ int main(int argc, char *argv[]) {
       genPlane(stof(argv[2]), stoi(argv[3]));
     } else
       cout << "Invalid length(float) or divisions(int)." << endl;
+
+  } else if (strcmp(argv[1], "box") == 0) {
+    cout << argv[1];
+    if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
+      genBox(stof(argv[2]), stoi(argv[3]));
+    } else
+      cout << "Invalid length(float) or divisions(int)." << endl;
   } else
-    cout << "Invalid model (available: plane)" << endl;
+    cout << "Invalid model (available: plane, box)" << endl;
 
   return 1;
 }
