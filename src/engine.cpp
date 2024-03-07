@@ -2,8 +2,6 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
-#include <algorithm>
-#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -13,34 +11,36 @@
 using namespace tinyxml2;
 using namespace std;
 
-struct Vector {
+struct Point3D {
   GLfloat x;
   GLfloat y;
   GLfloat z;
 };
 
 struct State {
-  Vector tVector;
+  Point3D translationPoint;
   GLfloat alpha;
   GLfloat beta;
   GLfloat gamma;
   GLfloat scale;
-  vector<Vector> vectors;
+  vector<Point3D> points;
+  vector<string> models;
 } state;
 
 struct Camera {
   int width;
   int height;
-  Vector position;
-  Vector lookAt;
-  Vector up;
+  Point3D position;
+  Point3D lookAt;
+  Point3D up;
   GLdouble fov;
   GLdouble near;
   GLdouble far;
 } camera;
 
 void initState() {
-  state.tVector.x = state.tVector.y = state.tVector.z = 0.0f;
+  state.translationPoint.x = state.translationPoint.y =
+      state.translationPoint.z = 0.0f;
   state.alpha = state.beta = state.gamma = 0.0f;
   state.scale = 1.0f;
 }
@@ -80,8 +80,14 @@ int readConfig(const char *config) {
   pListElem->QueryDoubleAttribute("near", &camera.near);
   pListElem->QueryDoubleAttribute("far", &camera.far);
 
-  // TODO: read group section
-
+  pElem = pRoot->FirstChildElement("group");
+  pElem = pElem->FirstChildElement("models");
+  pListElem = pElem->FirstChildElement("model");
+  while (pListElem != NULL) {
+    string modelName = pListElem->FindAttribute("file")->Value();
+    state.models.push_back(modelName);
+    pListElem = pListElem->NextSiblingElement("model");
+  }
   return 0;
 }
 
@@ -157,18 +163,18 @@ void drawPlane(float length, int divisions) {
   glEnd();
 }
 
-void readModel(char *fileName) {
+void readModel(string fileName) {
 
-  ifstream File(fileName);
+  ifstream File("../3d/" + fileName);
   string line;
 
   while (getline(File, line)) {
     istringstream lineStream(line);
-    Vector vector3d;
+    Point3D vector3d;
     lineStream >> vector3d.x;
     lineStream >> vector3d.y;
     lineStream >> vector3d.z;
-    state.vectors.push_back(vector3d);
+    state.points.push_back(vector3d);
   }
 
   File.close();
@@ -189,7 +195,8 @@ void renderScene(void) {
   drawAxes();
 
   // Geometric Transformations
-  glTranslatef(state.tVector.x, state.tVector.y, state.tVector.z);
+  glTranslatef(state.translationPoint.x, state.translationPoint.y,
+               state.translationPoint.z);
   glRotatef(state.alpha, 1.0f, 0.0f, 0.0f);
   glRotatef(state.beta, 0.0f, 1.0f, 0.0f);
   glRotatef(state.gamma, 0.0f, 0.0f, 1.0f);
@@ -200,8 +207,8 @@ void renderScene(void) {
   // drawPlane(2, 3);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glBegin(GL_TRIANGLES);
-  for (Vector vectorToDraw : state.vectors) {
-    glVertex3f(vectorToDraw.x, vectorToDraw.y, vectorToDraw.z);
+  for (Point3D point : state.points) {
+    glVertex3f(point.x, point.y, point.z);
   }
   glEnd();
 
@@ -213,22 +220,22 @@ void renderScene(void) {
 void processKeys(unsigned char key, int xx, int yy) {
   switch (key) {
   case 'a':
-    state.tVector.x += 0.5f;
+    state.translationPoint.x += 0.5f;
     break;
   case 'A':
-    state.tVector.x -= 0.5f;
+    state.translationPoint.x -= 0.5f;
     break;
   case 's':
-    state.tVector.y += 0.5f;
+    state.translationPoint.y += 0.5f;
     break;
   case 'S':
-    state.tVector.y -= 0.5f;
+    state.translationPoint.y -= 0.5f;
     break;
   case 'd':
-    state.tVector.z += 0.5f;
+    state.translationPoint.z += 0.5f;
     break;
   case 'D':
-    state.tVector.z -= 0.5f;
+    state.translationPoint.z -= 0.5f;
     break;
   case 'j':
     state.alpha += 5.0f;
@@ -256,7 +263,8 @@ void processKeys(unsigned char key, int xx, int yy) {
     break;
   case 'r':
     state.alpha = state.beta = state.gamma = 0.0f;
-    state.tVector.x = state.tVector.y = state.tVector.z = 0.0f;
+    state.translationPoint.x = state.translationPoint.y =
+        state.translationPoint.z = 0.0f;
     state.scale = 1.0f;
     break;
   }
@@ -267,8 +275,10 @@ void processKeys(unsigned char key, int xx, int yy) {
 int main(int argc, char **argv) {
 
   initState();
-  readConfig("../tests/test_files_phase_1/test_1_5.xml");
-  readModel(argv[1]);
+  readConfig(argv[1]);
+  for (string modelName : state.models) {
+    readModel(modelName);
+  }
 
   // Init GLUT and the window
   glutInit(&argc, argv);
