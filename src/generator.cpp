@@ -9,6 +9,9 @@
 using namespace tinyxml2;
 using namespace std;
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 void genPlane(float length, int divisions) {
   ostringstream fileName;
   fileName << "../3d/plane_" << length << "_" << divisions << ".3d";
@@ -224,25 +227,110 @@ void genBox(float length, int divisions) {
   }
 }
 
+void genCone(float radius, float height, int slices, int stacks) {
+
+  ostringstream fileName;
+  fileName << "../3d/cone_" << radius << "_" << height << "_" << slices << "_"
+           << stacks << ".3d";
+  ofstream File(fileName.str(), ios::trunc);
+
+  int i;
+  float step;
+  step = 360.0 / slices;
+
+  // Bottom
+  for (i = 0; i < slices; i++) {
+    File << 0.0f << " " << 0.0f << " " << 0.0f << endl;
+    File << cos((i + 1) * step * M_PI / 180.0) * radius << " " << 0.0f << " "
+         << -sin((i + 1) * step * M_PI / 180.0) * radius << endl;
+    File << cos(i * step * M_PI / 180.0) * radius << " " << 0.0f << " "
+         << -sin(i * step * M_PI / 180.0) * radius << endl;
+  }
+
+  // Body start
+  int j;
+  for (j = 1; j < stacks; j++) {
+    for (i = 0; i <= slices; i++) {
+      File << cos(i * step * M_PI / 180.0) * (radius * (stacks - j) / stacks)
+           << " " << height * j / stacks << " "
+           << -sin(i * step * M_PI / 180.0) * (radius * (stacks - j) / stacks)
+           << endl;
+      File << cos(i * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << " " << height * (j - 1) / stacks << " "
+           << -sin(i * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << endl;
+      File << cos((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - j) / stacks)
+           << " " << height * j / stacks << " "
+           << -sin((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - j) / stacks)
+           << endl;
+
+      File << cos((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - j) / stacks)
+           << " " << height * j / stacks << " "
+           << -sin((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - j) / stacks)
+           << endl;
+      File << cos(i * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << " " << height * (j - 1) / stacks << " "
+           << -sin(i * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << endl;
+      File << cos((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << " " << height * (j - 1) / stacks << " "
+           << -sin((i + 1) * step * M_PI / 180.0) *
+                  (radius * (stacks - (j - 1)) / stacks)
+           << endl;
+    }
+  }
+
+  // Body final
+  for (i = 0; i <= slices; i++) {
+    File << cos((i + 1) * step * M_PI / 180.0) *
+                (radius * (stacks - j) / stacks)
+         << " " << height << " "
+         << -sin((i + 1) * step * M_PI / 180.0) *
+                (radius * (stacks - j) / stacks)
+         << endl;
+    File << cos(i * step * M_PI / 180.0) *
+                (radius * (stacks - (j - 1)) / stacks)
+         << " " << height * (j - 1) / stacks << " "
+         << -sin(i * step * M_PI / 180.0) *
+                (radius * (stacks - (j - 1)) / stacks)
+         << endl;
+    File << cos((i + 1) * step * M_PI / 180.0) *
+                (radius * (stacks - (j - 1)) / stacks)
+         << " " << height * (j - 1) / stacks << " "
+         << -sin((i + 1) * step * M_PI / 180.0) *
+                (radius * (stacks - (j - 1)) / stacks)
+         << endl;
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   // generateConfig();
 
   if (strcmp(argv[1], "plane") == 0) {
-    cout << argv[1];
     if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
       genPlane(stof(argv[2]), stoi(argv[3]));
     } else
       cout << "Invalid length(float) or divisions(int)." << endl;
 
   } else if (strcmp(argv[1], "box") == 0) {
-    cout << argv[1];
     if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
       genBox(stof(argv[2]), stoi(argv[3]));
     } else
       cout << "Invalid length(float) or divisions(int)." << endl;
-  } else
-    cout << "Invalid model (available: plane, box)" << endl;
 
-  return 1;
+  } else if (strcmp(argv[1], "cone") == 0) {
+    genCone(stof(argv[2]), stoi(argv[3]), stoi(argv[4]), stoi(argv[5]));
+
+    return 1;
+  }
 }
