@@ -26,6 +26,7 @@ void genPlane(float length, int divisions) {
 
   int fixDiv = 0;
   float ofset = 0;
+  length = length / divisions;
   if (divisions % 2 == 1) {
     fixDiv = 1;
     ofset = length / 2;
