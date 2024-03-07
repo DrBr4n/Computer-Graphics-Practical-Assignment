@@ -48,76 +48,10 @@ void genPlane(float length, int divisions) {
            << length * i + ofset << endl;
     }
   }
-
   File.close();
 }
 
-void generateConfig() {
-  XMLDocument xmlDoc;
-
-  XMLNode *pRoot = xmlDoc.NewElement("world");
-  xmlDoc.InsertFirstChild(pRoot);
-
-  XMLElement *pElement = xmlDoc.NewElement("window");
-  pElement->SetAttribute("width", "512");
-  pElement->SetAttribute("height", "512");
-  pRoot->InsertEndChild(pElement);
-
-  XMLElement *pListElement = xmlDoc.NewElement("camera");
-
-  pElement = xmlDoc.NewElement("position");
-  pElement->SetAttribute("x", "3");
-  pElement->SetAttribute("y", "2");
-  pElement->SetAttribute("z", "1");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("lookAt");
-  pElement->SetAttribute("x", "0");
-  pElement->SetAttribute("y", "0");
-  pElement->SetAttribute("z", "0");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("up");
-  pElement->SetAttribute("x", "0");
-  pElement->SetAttribute("y", "1");
-  pElement->SetAttribute("z", "0");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("projection");
-  pElement->SetAttribute("fov", "60");
-  pElement->SetAttribute("near", "1");
-  pElement->SetAttribute("far", "1000");
-  pListElement->InsertEndChild(pElement);
-
-  pRoot->InsertEndChild(pListElement);
-
-  XMLElement *pListListElement = xmlDoc.NewElement("group");
-  pListElement = xmlDoc.NewElement("models");
-  pListListElement->InsertEndChild(pListElement);
-
-  pElement = xmlDoc.NewElement("model");
-  pElement->SetAttribute("file", "plane.3d");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("model");
-  pElement->SetAttribute("file", "box.3d");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("model");
-  pElement->SetAttribute("file", "sphere.3d");
-  pListElement->InsertEndChild(pElement);
-
-  pElement = xmlDoc.NewElement("model");
-  pElement->SetAttribute("file", "cone.3d");
-  pListElement->InsertEndChild(pElement);
-
-  pListListElement->InsertEndChild(pListElement);
-  pRoot->InsertEndChild(pListListElement);
-
-  xmlDoc.SaveFile("config.xml");
-}
 void genBox(float length, int divisions) {
-
   ostringstream fileName;
   fileName << "../3d/box_" << length << "_" << divisions << ".3d";
   ofstream File(fileName.str(), ios::trunc);
@@ -162,7 +96,6 @@ void genBox(float length, int divisions) {
   // Lateral Frontal
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
-
       File << j * (length / divisions) + start << " "
            << i * (length / divisions) + start << " " << -start << endl;
       File << (j + 1) * (length / divisions) + start << " "
@@ -199,7 +132,6 @@ void genBox(float length, int divisions) {
   // Lateral Direito
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
-
       File << -start << " " << j * (length / divisions) + start << " "
            << i * (length / divisions) + start << endl;
       File << -start << " " << (j + 1) * (length / divisions) + start << " "
@@ -218,7 +150,6 @@ void genBox(float length, int divisions) {
   // Lateral Esquerdo
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
-
       File << start << " " << (j + 1) * (length / divisions) + start << " "
            << i * (length / divisions) + start << endl;
       File << start << " " << j * (length / divisions) + start << " "
