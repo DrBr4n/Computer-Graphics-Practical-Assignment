@@ -1,2 +1,4 @@
 *
 !.gitignore
+!runTests.sh
+!genTestModels.sh

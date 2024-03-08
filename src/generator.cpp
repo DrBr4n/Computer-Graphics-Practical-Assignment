@@ -1,17 +1,11 @@
-#include "tinyxml2.h"
-#include <GL/gl.h>
 #include <GL/glut.h>
+#include <cstring>
 #include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
 #include <vector>
-// guide: https://shilohjames.wordpress.com/2014/04/27/tinyxml2-tutorial/
-using namespace tinyxml2;
-using namespace std;
-
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+using namespace std;
 
 struct Point3D {
   GLfloat x;
@@ -19,10 +13,8 @@ struct Point3D {
   GLfloat z;
 };
 
-void genPlane(float length, int divisions) {
-  ostringstream fileName;
-  fileName << "../3d/plane_" << length << "_" << divisions << ".3d";
-  ofstream File(fileName.str(), ios::trunc);
+void genPlane(float length, int divisions, char *fileName) {
+  ofstream File(fileName, ios::trunc);
 
   int fixDiv = 0;
   float ofset = 0;
@@ -51,10 +43,8 @@ void genPlane(float length, int divisions) {
   File.close();
 }
 
-void genBox(float length, int divisions) {
-  ostringstream fileName;
-  fileName << "../3d/box_" << length << "_" << divisions << ".3d";
-  ofstream File(fileName.str(), ios::trunc);
+void genBox(float length, int divisions, char *fileName) {
+  ofstream File(fileName, ios::trunc);
 
   float start = -length / 2.0f;
   // BASE
@@ -166,12 +156,9 @@ void genBox(float length, int divisions) {
   }
 }
 
-void genCone(float radius, float height, int slices, int stacks) {
-
-  ostringstream fileName;
-  fileName << "../3d/cone_" << radius << "_" << height << "_" << slices << "_"
-           << stacks << ".3d";
-  ofstream File(fileName.str(), ios::trunc);
+void genCone(float radius, float height, int slices, int stacks,
+             char *fileName) {
+  ofstream File(fileName, ios::trunc);
 
   int i;
   float step;
@@ -251,12 +238,8 @@ void genCone(float radius, float height, int slices, int stacks) {
   }
 }
 
-void genSphere(float radius, int slices, int stacks) {
-
-  ostringstream fileName;
-  fileName << "../3d/sphere_" << radius << "_" << slices << "_" << stacks
-           << ".3d";
-  ofstream File(fileName.str(), ios::trunc);
+void genSphere(float radius, int slices, int stacks, char *fileName) {
+  ofstream File(fileName, ios::trunc);
 
   vector<Point3D> spherePoints;
   float sliceAngle, stackAngle;
@@ -312,26 +295,15 @@ void genSphere(float radius, int slices, int stacks) {
 
 int main(int argc, char *argv[]) {
 
-  // generateConfig();
-
   if (strcmp(argv[1], "plane") == 0) {
-    if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
-      genPlane(stof(argv[2]), stoi(argv[3]));
-    } else
-      cout << "Invalid length(float) or divisions(int)." << endl;
-
+    genPlane(stof(argv[2]), stoi(argv[3]), argv[4]);
   } else if (strcmp(argv[1], "box") == 0) {
-    if (stof(argv[2]) > 0 && stoi(argv[3]) > 0) {
-      genBox(stof(argv[2]), stoi(argv[3]));
-    } else
-      cout << "Invalid length(float) or divisions(int)." << endl;
-
+    genBox(stof(argv[2]), stoi(argv[3]), argv[4]);
   } else if (strcmp(argv[1], "cone") == 0) {
-    genCone(stof(argv[2]), stoi(argv[3]), stoi(argv[4]), stoi(argv[5]));
-
+    genCone(stof(argv[2]), stof(argv[3]), stoi(argv[4]), stoi(argv[5]),
+            argv[6]);
   } else if (strcmp(argv[1], "sphere") == 0) {
-    genSphere(stof(argv[2]), stoi(argv[3]), stoi(argv[4]));
-
-    return 1;
+    genSphere(stof(argv[2]), stoi(argv[3]), stoi(argv[4]), argv[5]);
   }
+  return 0;
 }

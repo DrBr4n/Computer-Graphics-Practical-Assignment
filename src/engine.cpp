@@ -2,7 +2,6 @@
 #include <GL/glut.h>
 #include <cmath>
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -31,10 +30,10 @@ struct State {
   vector<string> models;
 } state;
 
-void initState() {
-  state.alfa = 0.0f;
-  state.beta = 0.0f;
+void initCamera() {
   state.radius = 5.0f;
+  state.beta = 0; // asin(state.camPos.y / state.radius);
+  state.alfa = 0; // asin(state.camPos.x / (state.radius * cos(state.beta)));
 }
 
 void drawAxes() {
@@ -206,8 +205,8 @@ void renderScene(void) {
 
 int main(int argc, char **argv) {
 
-  initState();
   readConfig(argv[1]);
+  initCamera();
   for (string modelName : state.models) {
     readModel(modelName);
   }
@@ -217,15 +216,14 @@ int main(int argc, char **argv) {
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100, 100);
   glutInitWindowSize(state.winWidth, state.winHeight);
-  glutCreateWindow("CG@DI-UM");
+  glutCreateWindow(argv[1]);
 
   // Required callback registry
   glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
+  glutSpecialFunc(processSpecialKeys);
 
-  // glutSpecialFunc(processSpecialKeys);
-
-  //  OpenGL settings
+  // OpenGL settings
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -233,5 +231,5 @@ int main(int argc, char **argv) {
   // Enter GLUT's main cycle
   glutMainLoop();
 
-  return 1;
+  return 0;
 }
