@@ -1,7 +1,6 @@
 #include "tinyxml2.h"
-#include <GL/gl.h>
-#include <GL/glu.h>
 #include <GL/glut.h>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -18,87 +17,24 @@ struct Point3D {
 };
 
 struct State {
-  Point3D translationPoint;
-  GLfloat alpha;
-  GLfloat beta;
-  GLfloat gamma;
-  GLfloat scale;
+  int winWidth;
+  int winHeight;
+
+  Point3D camPos;
+  Point3D lookAt;
+  Point3D up;
+  GLdouble fov, near, far;
+
+  GLfloat alfa, beta, radius;
+
   vector<Point3D> points;
   vector<string> models;
 } state;
 
-struct Camera {
-  int width;
-  int height;
-  Point3D position;
-  Point3D lookAt;
-  Point3D up;
-  GLdouble fov;
-  GLdouble near;
-  GLdouble far;
-} camera;
-
 void initState() {
-  state.translationPoint.x = state.translationPoint.y =
-      state.translationPoint.z = 0.0f;
-  state.alpha = state.beta = state.gamma = 0.0f;
-  state.scale = 1.0f;
-}
-
-// Simple translations, rotations and scale
-void processKeys(unsigned char key, int xx, int yy) {
-  switch (key) {
-  case 'a':
-    state.translationPoint.x += 0.5f;
-    break;
-  case 'A':
-    state.translationPoint.x -= 0.5f;
-    break;
-  case 's':
-    state.translationPoint.y += 0.5f;
-    break;
-  case 'S':
-    state.translationPoint.y -= 0.5f;
-    break;
-  case 'd':
-    state.translationPoint.z += 0.5f;
-    break;
-  case 'D':
-    state.translationPoint.z -= 0.5f;
-    break;
-  case 'j':
-    state.alpha += 5.0f;
-    break;
-  case 'J':
-    state.alpha -= 5.0f;
-    break;
-  case 'k':
-    state.beta += 5.0f;
-    break;
-  case 'K':
-    state.beta -= 5.0f;
-    break;
-  case 'l':
-    state.gamma += 5.0f;
-    break;
-  case 'L':
-    state.gamma -= 5.0f;
-    break;
-  case 'i':
-    state.scale += 0.1f;
-    break;
-  case 'I':
-    state.scale -= 0.1f;
-    break;
-  case 'r':
-    state.alpha = state.beta = state.gamma = 0.0f;
-    state.translationPoint.x = state.translationPoint.y =
-        state.translationPoint.z = 0.0f;
-    state.scale = 1.0f;
-    break;
-  }
-
-  glutPostRedisplay();
+  state.alfa = 0.0f;
+  state.beta = 0.0f;
+  state.radius = 5.0f;
 }
 
 void drawAxes() {
@@ -122,7 +58,6 @@ void drawAxes() {
 }
 
 int readConfig(const char *config) {
-
   XMLDocument xmlDoc;
   if (xmlDoc.LoadFile(config) != 0)
     return XML_ERROR_FILE_COULD_NOT_BE_OPENED;
@@ -132,29 +67,29 @@ int readConfig(const char *config) {
     return XML_ERROR_FILE_READ_ERROR;
 
   XMLElement *pElem = pRoot->FirstChildElement("window");
-  pElem->QueryIntAttribute("width", &camera.width);
-  pElem->QueryIntAttribute("height", &camera.height);
+  pElem->QueryIntAttribute("width", &state.winWidth);
+  pElem->QueryIntAttribute("height", &state.winHeight);
 
   pElem = pRoot->FirstChildElement("camera");
   XMLElement *pListElem = pElem->FirstChildElement("position");
-  pListElem->QueryFloatAttribute("x", &camera.position.x);
-  pListElem->QueryFloatAttribute("y", &camera.position.y);
-  pListElem->QueryFloatAttribute("z", &camera.position.z);
+  pListElem->QueryFloatAttribute("x", &state.camPos.x);
+  pListElem->QueryFloatAttribute("y", &state.camPos.y);
+  pListElem->QueryFloatAttribute("z", &state.camPos.z);
 
   pListElem = pListElem->NextSiblingElement("lookAt");
-  pListElem->QueryFloatAttribute("x", &camera.lookAt.x);
-  pListElem->QueryFloatAttribute("y", &camera.lookAt.y);
-  pListElem->QueryFloatAttribute("z", &camera.lookAt.z);
+  pListElem->QueryFloatAttribute("x", &state.lookAt.x);
+  pListElem->QueryFloatAttribute("y", &state.lookAt.y);
+  pListElem->QueryFloatAttribute("z", &state.lookAt.z);
 
   pListElem = pListElem->NextSiblingElement("up");
-  pListElem->QueryFloatAttribute("x", &camera.up.x);
-  pListElem->QueryFloatAttribute("y", &camera.up.y);
-  pListElem->QueryFloatAttribute("z", &camera.up.z);
+  pListElem->QueryFloatAttribute("x", &state.up.x);
+  pListElem->QueryFloatAttribute("y", &state.up.y);
+  pListElem->QueryFloatAttribute("z", &state.up.z);
 
   pListElem = pListElem->NextSiblingElement("projection");
-  pListElem->QueryDoubleAttribute("fov", &camera.fov);
-  pListElem->QueryDoubleAttribute("near", &camera.near);
-  pListElem->QueryDoubleAttribute("far", &camera.far);
+  pListElem->QueryDoubleAttribute("fov", &state.fov);
+  pListElem->QueryDoubleAttribute("near", &state.near);
+  pListElem->QueryDoubleAttribute("far", &state.far);
 
   pElem = pRoot->FirstChildElement("group");
   pElem = pElem->FirstChildElement("models");
@@ -168,7 +103,6 @@ int readConfig(const char *config) {
 }
 
 void readModel(string fileName) {
-
   ifstream File("../3d/" + fileName);
   string line;
 
@@ -182,6 +116,43 @@ void readModel(string fileName) {
   }
 
   File.close();
+}
+
+void spherical2Cartesian() {
+  state.camPos.x = state.radius * cos(state.beta) * sin(state.alfa);
+  state.camPos.y = state.radius * sin(state.beta);
+  state.camPos.z = state.radius * cos(state.beta) * cos(state.alfa);
+}
+
+void processSpecialKeys(int key, int xx, int yy) {
+  switch (key) {
+  case GLUT_KEY_RIGHT:
+    state.alfa -= 0.1;
+    break;
+  case GLUT_KEY_LEFT:
+    state.alfa += 0.1;
+    break;
+  case GLUT_KEY_UP:
+    state.beta += 0.1f;
+    if (state.beta > 1.5f)
+      state.beta = 1.5f;
+    break;
+  case GLUT_KEY_DOWN:
+    state.beta -= 0.1f;
+    if (state.beta < -1.5f)
+      state.beta = -1.5f;
+    break;
+  case GLUT_KEY_PAGE_DOWN:
+    state.radius -= 0.1f;
+    if (state.radius < 0.1f)
+      state.radius = 0.1f;
+    break;
+  case GLUT_KEY_PAGE_UP:
+    state.radius += 0.1f;
+    break;
+  }
+  spherical2Cartesian();
+  glutPostRedisplay();
 }
 
 void changeSize(int w, int h) {
@@ -202,7 +173,8 @@ void changeSize(int w, int h) {
   glViewport(0, 0, w, h);
 
   // Set perspective
-  gluPerspective(45.0f, ratio, 1.0f, 1000.0f);
+  gluPerspective(state.fov, state.winWidth * 1.0 / state.winHeight, state.near,
+                 state.far);
 
   // Return to the model view matrix mode
   glMatrixMode(GL_MODELVIEW);
@@ -214,26 +186,14 @@ void renderScene(void) {
 
   // Set the camera
   glLoadIdentity();
-  gluLookAt(camera.position.x, camera.position.y, camera.position.z,
-            camera.lookAt.x, camera.lookAt.y, camera.lookAt.z, camera.up.x,
-            camera.up.y, camera.up.z);
-  // gluPerspective(camera.fov, camera.width * 1.0 / camera.height, camera.near,
-  // camera.far);
+  gluLookAt(state.camPos.x, state.camPos.y, state.camPos.z, state.lookAt.x,
+            state.lookAt.y, state.lookAt.z, state.up.x, state.up.y, state.up.z);
 
+  // Draw
   drawAxes();
 
-  // Geometric Transformations
-  glTranslatef(state.translationPoint.x, state.translationPoint.y,
-               state.translationPoint.z);
-  glRotatef(state.alpha, 1.0f, 0.0f, 0.0f);
-  glRotatef(state.beta, 0.0f, 1.0f, 0.0f);
-  glRotatef(state.gamma, 0.0f, 0.0f, 1.0f);
-  glScalef(state.scale, state.scale, state.scale);
-
   glColor3f(1.0f, 1.0f, 1.0f);
-  // Drawings
-  // drawPlane(2, 3);
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
   glBegin(GL_TRIANGLES);
   for (Point3D point : state.points) {
     glVertex3f(point.x, point.y, point.z);
@@ -256,18 +216,19 @@ int main(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100, 100);
-  glutInitWindowSize(camera.width, camera.height);
+  glutInitWindowSize(state.winWidth, state.winHeight);
   glutCreateWindow("CG@DI-UM");
 
   // Required callback registry
   glutDisplayFunc(renderScene);
   glutReshapeFunc(changeSize);
 
-  glutKeyboardFunc(processKeys);
+  // glutSpecialFunc(processSpecialKeys);
 
   //  OpenGL settings
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   // Enter GLUT's main cycle
   glutMainLoop();
