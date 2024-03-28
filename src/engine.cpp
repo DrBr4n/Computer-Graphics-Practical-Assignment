@@ -15,25 +15,34 @@ struct Point3D {
   GLfloat z;
 };
 
-struct State {
+struct XMLInfo {
   int winWidth;
   int winHeight;
-
   Point3D camPos;
   Point3D lookAt;
   Point3D up;
   GLdouble fov, near, far;
-
   GLfloat alfa, beta, radius;
+};
 
-  vector<Point3D> points;
-  vector<string> models;
-} state;
+struct Group {
+  Point3D translate = {0.0f, 0.0f, 0.0f};
+  Point3D rotate = {0.0f, 0.0f, 0.0f};
+  Point3D scale = {0.0f, 0.0f, 0.0f};
+  GLfloat angle = 0.0f;
+  std::vector<std::string> models;
+  std::vector<Point3D> points;
+  std::vector<struct Group> children;
+};
+
+struct XMLInfo *xmlInfo = new XMLInfo();
+struct Group *groupTree = NULL;
 
 void initCamera() {
-  state.radius = 5.0f;
-  state.beta = 0; // asin(state.camPos.y / state.radius);
-  state.alfa = 0; // asin(state.camPos.x / (state.radius * cos(state.beta)));
+  xmlInfo->radius = 5.0f;
+  xmlInfo->beta = 0; // asin(xmlInfo.camPos.y / xmlInfo.radius);
+  xmlInfo->alfa =
+      0; // asin(xmlInfo.camPos.x / (xmlInfo.radius * cos(xmlInfo.beta)));
 }
 
 void drawAxes() {
@@ -56,6 +65,52 @@ void drawAxes() {
   glEnd();
 }
 
+struct Group *parseGroups(XMLElement *pGroupElem) {
+  XMLElement *pElem = NULL;
+  struct Group *pGroup = new Group();
+  // Check if <transform> exists, if so use for loop to retrieve first
+  // transform and iterate over its siblings
+  if ((pElem = pGroupElem->FirstChildElement("transform")) != NULL) {
+    for (pElem = pElem->FirstChildElement(); pElem != NULL;
+         pElem = pElem->NextSiblingElement()) {
+      Point3D newPoint;
+      pElem->QueryFloatAttribute("x", &newPoint.x);
+      pElem->QueryFloatAttribute("y", &newPoint.y);
+      pElem->QueryFloatAttribute("z", &newPoint.z);
+      const char *transformType = pElem->Name();
+      if (std::strcmp(transformType, "translate") == 0) {
+        pGroup->translate = newPoint;
+      } else if (std::strcmp(transformType, "rotate") == 0) {
+        pElem->QueryFloatAttribute("angle", &pGroup->angle);
+        pGroup->rotate = newPoint;
+      } else if (std::strcmp(transformType, "scale") == 0) {
+        pGroup->scale = newPoint;
+      }
+    }
+  }
+
+  // Check if <models> exists, if so use for loop to retrieve first model
+  // and iterate over its siblings
+  if ((pElem = pGroupElem->FirstChildElement("models")) != NULL) {
+    for (pElem = pElem->FirstChildElement("model"); pElem != NULL;
+         pElem = pElem->NextSiblingElement("model")) {
+      std::string modelName = pElem->FindAttribute("file")->Value();
+      pGroup->models.emplace_back(modelName);
+    }
+  }
+
+  // Create a child for every group child of current group and emplace it in the
+  // current group children vector
+  struct Group *pChild = NULL;
+  for (pGroupElem = pGroupElem->FirstChildElement("group"); pGroupElem != NULL;
+       pGroupElem = pGroupElem->NextSiblingElement("group")) {
+    pChild = parseGroups(pGroupElem);
+    pGroup->children.emplace_back(*pChild);
+  }
+
+  return pGroup;
+}
+
 int readConfig(const char *config) {
   XMLDocument xmlDoc;
   if (xmlDoc.LoadFile(config) != 0)
@@ -66,38 +121,35 @@ int readConfig(const char *config) {
     return XML_ERROR_FILE_READ_ERROR;
 
   XMLElement *pElem = pRoot->FirstChildElement("window");
-  pElem->QueryIntAttribute("width", &state.winWidth);
-  pElem->QueryIntAttribute("height", &state.winHeight);
+  pElem->QueryIntAttribute("width", &xmlInfo->winWidth);
+  pElem->QueryIntAttribute("height", &xmlInfo->winHeight);
 
   pElem = pRoot->FirstChildElement("camera");
   XMLElement *pListElem = pElem->FirstChildElement("position");
-  pListElem->QueryFloatAttribute("x", &state.camPos.x);
-  pListElem->QueryFloatAttribute("y", &state.camPos.y);
-  pListElem->QueryFloatAttribute("z", &state.camPos.z);
+  pListElem->QueryFloatAttribute("x", &xmlInfo->camPos.x);
+  pListElem->QueryFloatAttribute("y", &xmlInfo->camPos.y);
+  pListElem->QueryFloatAttribute("z", &xmlInfo->camPos.z);
 
   pListElem = pListElem->NextSiblingElement("lookAt");
-  pListElem->QueryFloatAttribute("x", &state.lookAt.x);
-  pListElem->QueryFloatAttribute("y", &state.lookAt.y);
-  pListElem->QueryFloatAttribute("z", &state.lookAt.z);
+  pListElem->QueryFloatAttribute("x", &xmlInfo->lookAt.x);
+  pListElem->QueryFloatAttribute("y", &xmlInfo->lookAt.y);
+  pListElem->QueryFloatAttribute("z", &xmlInfo->lookAt.z);
 
   pListElem = pListElem->NextSiblingElement("up");
-  pListElem->QueryFloatAttribute("x", &state.up.x);
-  pListElem->QueryFloatAttribute("y", &state.up.y);
-  pListElem->QueryFloatAttribute("z", &state.up.z);
+  pListElem->QueryFloatAttribute("x", &xmlInfo->up.x);
+  pListElem->QueryFloatAttribute("y", &xmlInfo->up.y);
+  pListElem->QueryFloatAttribute("z", &xmlInfo->up.z);
 
   pListElem = pListElem->NextSiblingElement("projection");
-  pListElem->QueryDoubleAttribute("fov", &state.fov);
-  pListElem->QueryDoubleAttribute("near", &state.near);
-  pListElem->QueryDoubleAttribute("far", &state.far);
+  pListElem->QueryDoubleAttribute("fov", &xmlInfo->fov);
+  pListElem->QueryDoubleAttribute("near", &xmlInfo->near);
+  pListElem->QueryDoubleAttribute("far", &xmlInfo->far);
 
-  pElem = pRoot->FirstChildElement("group");
-  pElem = pElem->FirstChildElement("models");
-  pListElem = pElem->FirstChildElement("model");
-  while (pListElem != NULL) {
-    string modelName = pListElem->FindAttribute("file")->Value();
-    state.models.push_back(modelName);
-    pListElem = pListElem->NextSiblingElement("model");
+  XMLElement *pGroup = pRoot->FirstChildElement("group");
+  if (pGroup != NULL) {
+    groupTree = parseGroups(pGroup);
   }
+
   return 0;
 }
 
@@ -111,43 +163,44 @@ void readModel(string fileName) {
     lineStream >> vector3d.x;
     lineStream >> vector3d.y;
     lineStream >> vector3d.z;
-    state.points.push_back(vector3d);
+    // FIXME:
+    // xmlInfo.points.push_back(vector3d);
   }
 
   File.close();
 }
 
 void spherical2Cartesian() {
-  state.camPos.x = state.radius * cos(state.beta) * sin(state.alfa);
-  state.camPos.y = state.radius * sin(state.beta);
-  state.camPos.z = state.radius * cos(state.beta) * cos(state.alfa);
+  xmlInfo->camPos.x = xmlInfo->radius * cos(xmlInfo->beta) * sin(xmlInfo->alfa);
+  xmlInfo->camPos.y = xmlInfo->radius * sin(xmlInfo->beta);
+  xmlInfo->camPos.z = xmlInfo->radius * cos(xmlInfo->beta) * cos(xmlInfo->alfa);
 }
 
 void processSpecialKeys(int key, int xx, int yy) {
   switch (key) {
   case GLUT_KEY_RIGHT:
-    state.alfa -= 0.1;
+    xmlInfo->alfa -= 0.1;
     break;
   case GLUT_KEY_LEFT:
-    state.alfa += 0.1;
+    xmlInfo->alfa += 0.1;
     break;
   case GLUT_KEY_UP:
-    state.beta += 0.1f;
-    if (state.beta > 1.5f)
-      state.beta = 1.5f;
+    xmlInfo->beta += 0.1f;
+    if (xmlInfo->beta > 1.5f)
+      xmlInfo->beta = 1.5f;
     break;
   case GLUT_KEY_DOWN:
-    state.beta -= 0.1f;
-    if (state.beta < -1.5f)
-      state.beta = -1.5f;
+    xmlInfo->beta -= 0.1f;
+    if (xmlInfo->beta < -1.5f)
+      xmlInfo->beta = -1.5f;
     break;
   case GLUT_KEY_PAGE_DOWN:
-    state.radius -= 0.1f;
-    if (state.radius < 0.1f)
-      state.radius = 0.1f;
+    xmlInfo->radius -= 0.1f;
+    if (xmlInfo->radius < 0.1f)
+      xmlInfo->radius = 0.1f;
     break;
   case GLUT_KEY_PAGE_UP:
-    state.radius += 0.1f;
+    xmlInfo->radius += 0.1f;
     break;
   }
   spherical2Cartesian();
@@ -172,8 +225,8 @@ void changeSize(int w, int h) {
   glViewport(0, 0, w, h);
 
   // Set perspective
-  gluPerspective(state.fov, state.winWidth * 1.0 / state.winHeight, state.near,
-                 state.far);
+  gluPerspective(xmlInfo->fov, xmlInfo->winWidth * 1.0 / xmlInfo->winHeight,
+                 xmlInfo->near, xmlInfo->far);
 
   // Return to the model view matrix mode
   glMatrixMode(GL_MODELVIEW);
@@ -185,8 +238,9 @@ void renderScene(void) {
 
   // Set the camera
   glLoadIdentity();
-  gluLookAt(state.camPos.x, state.camPos.y, state.camPos.z, state.lookAt.x,
-            state.lookAt.y, state.lookAt.z, state.up.x, state.up.y, state.up.z);
+  gluLookAt(xmlInfo->camPos.x, xmlInfo->camPos.y, xmlInfo->camPos.z,
+            xmlInfo->lookAt.x, xmlInfo->lookAt.y, xmlInfo->lookAt.z,
+            xmlInfo->up.x, xmlInfo->up.y, xmlInfo->up.z);
 
   // Draw
   drawAxes();
@@ -194,9 +248,9 @@ void renderScene(void) {
   glColor3f(1.0f, 1.0f, 1.0f);
 
   glBegin(GL_TRIANGLES);
-  for (Point3D point : state.points) {
-    glVertex3f(point.x, point.y, point.z);
-  }
+  // for (point3d point : xmlinfo.points) {
+  //   glvertex3f(point.x, point.y, point.z);
+  // }
   glEnd();
 
   // End of frame
@@ -207,15 +261,15 @@ int main(int argc, char **argv) {
 
   readConfig(argv[1]);
   initCamera();
-  for (string modelName : state.models) {
-    readModel(modelName);
-  }
+  // for (string modelName : xmlInfo.models) {
+  //   readModel(modelName);
+  // }
 
   // Init GLUT and the window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
   glutInitWindowPosition(100, 100);
-  glutInitWindowSize(state.winWidth, state.winHeight);
+  glutInitWindowSize(xmlInfo->winWidth, xmlInfo->winHeight);
   glutCreateWindow(argv[1]);
 
   // Required callback registry
