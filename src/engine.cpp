@@ -1,4 +1,5 @@
 #include "tinyxml2.h"
+#include <GL/gl.h>
 #include <GL/glut.h>
 #include <cmath>
 #include <fstream>
@@ -153,21 +154,45 @@ int readConfig(const char *config) {
   return 0;
 }
 
-void readModel(string fileName) {
-  ifstream File("../3d/" + fileName);
-  string line;
+vector<struct Point3D> readModels(vector<string> fileNames) {
+  vector<struct Point3D> points;
 
-  while (getline(File, line)) {
-    istringstream lineStream(line);
-    Point3D vector3d;
-    lineStream >> vector3d.x;
-    lineStream >> vector3d.y;
-    lineStream >> vector3d.z;
-    // FIXME:
-    // xmlInfo.points.push_back(vector3d);
+  for (string fileName : fileNames) {
+    ifstream File("../3d/" + fileName);
+    string line;
+
+    while (getline(File, line)) {
+      istringstream lineStream(line);
+      Point3D vector3d;
+      lineStream >> vector3d.x;
+      lineStream >> vector3d.y;
+      lineStream >> vector3d.z;
+      points.emplace_back(vector3d);
+    }
+
+    File.close();
+  }
+  return points;
+}
+
+void drawGroupTree(struct Group *group) {
+
+  for (struct Group child : group->children) {
+    glPushMatrix();
+    drawGroupTree(&child);
+    glPopMatrix();
   }
 
-  File.close();
+  glTranslatef(group->translate.x, group->translate.y, group->translate.z);
+  glRotatef(group->angle, group->rotate.x, group->rotate.y, group->rotate.z);
+  glScalef(group->scale.x, group->scale.y, group->scale.z);
+  group->points = readModels(group->models);
+
+  glBegin(GL_TRIANGLES);
+  for (struct Point3D point : group->points) {
+    glVertex3f(point.x, point.y, point.z);
+  }
+  glEnd();
 }
 
 void spherical2Cartesian() {
@@ -247,11 +272,7 @@ void renderScene(void) {
 
   glColor3f(1.0f, 1.0f, 1.0f);
 
-  glBegin(GL_TRIANGLES);
-  // for (point3d point : xmlinfo.points) {
-  //   glvertex3f(point.x, point.y, point.z);
-  // }
-  glEnd();
+  drawGroupTree(groupTree);
 
   // End of frame
   glutSwapBuffers();
@@ -261,9 +282,6 @@ int main(int argc, char **argv) {
 
   readConfig(argv[1]);
   initCamera();
-  // for (string modelName : xmlInfo.models) {
-  //   readModel(modelName);
-  // }
 
   // Init GLUT and the window
   glutInit(&argc, argv);
