@@ -3,6 +3,7 @@
 #include <GL/glut.h>
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -34,6 +35,7 @@ struct Group {
   std::vector<std::string> models;
   std::vector<Point3D> points;
   std::vector<struct Group> children;
+  std::vector<int> orderOfTransformations;
 };
 
 struct XMLInfo *xmlInfo = new XMLInfo();
@@ -66,6 +68,11 @@ void drawAxes() {
   glEnd();
 }
 
+// NOTE:: translate-1, rotate-2, scale-3
+// Geometric transformations can only exist inside a group(v)
+// and are applied to all models and subgroups            (?)
+// There can only be one transformation of each type      (-)
+// Note: the order of the geometric transforms is relevant(v)
 struct Group *parseGroups(XMLElement *pGroupElem) {
   XMLElement *pElem = NULL;
   struct Group *pGroup = new Group();
@@ -80,11 +87,14 @@ struct Group *parseGroups(XMLElement *pGroupElem) {
       pElem->QueryFloatAttribute("z", &newPoint.z);
       const char *transformType = pElem->Name();
       if (std::strcmp(transformType, "translate") == 0) {
+        pGroup->orderOfTransformations.push_back(1);
         pGroup->translate = newPoint;
       } else if (std::strcmp(transformType, "rotate") == 0) {
+        pGroup->orderOfTransformations.push_back(2);
         pElem->QueryFloatAttribute("angle", &pGroup->angle);
         pGroup->rotate = newPoint;
       } else if (std::strcmp(transformType, "scale") == 0) {
+        pGroup->orderOfTransformations.push_back(3);
         pGroup->scale = newPoint;
       }
     }
@@ -177,15 +187,21 @@ vector<struct Point3D> readModels(vector<string> fileNames) {
 
 void drawGroupTree(struct Group *group) {
 
-  for (struct Group child : group->children) {
-    glPushMatrix();
-    drawGroupTree(&child);
-    glPopMatrix();
+  for (const auto &order : group->orderOfTransformations) {
+    switch (order) {
+    case 1:
+      glTranslatef(group->translate.x, group->translate.y, group->translate.z);
+      break;
+    case 2:
+      glRotatef(group->angle, group->rotate.x, group->rotate.y,
+                group->rotate.z);
+      break;
+    case 3:
+      glScalef(group->scale.x, group->scale.y, group->scale.z);
+      break;
+    }
   }
 
-  glTranslatef(group->translate.x, group->translate.y, group->translate.z);
-  glRotatef(group->angle, group->rotate.x, group->rotate.y, group->rotate.z);
-  glScalef(group->scale.x, group->scale.y, group->scale.z);
   group->points = readModels(group->models);
 
   glBegin(GL_TRIANGLES);
@@ -193,6 +209,12 @@ void drawGroupTree(struct Group *group) {
     glVertex3f(point.x, point.y, point.z);
   }
   glEnd();
+
+  for (struct Group child : group->children) {
+    glPushMatrix();
+    drawGroupTree(&child);
+    glPopMatrix();
+  }
 }
 
 void spherical2Cartesian() {
@@ -282,6 +304,7 @@ int main(int argc, char **argv) {
 
   readConfig(argv[1]);
   initCamera();
+  debugGroupTree(groupTree);
 
   // Init GLUT and the window
   glutInit(&argc, argv);
