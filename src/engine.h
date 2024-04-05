@@ -1,10 +1,11 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "tinyxml2.h"
-#include <GL/gl.h>
 #include <string>
 #include <vector>
+
+#include "tinyxml2.h"
+#include <GL/glut.h>
 
 using namespace tinyxml2;
 

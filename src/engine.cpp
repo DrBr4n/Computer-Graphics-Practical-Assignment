@@ -1,13 +1,12 @@
 #include "engine.h"
 
-#include <GL/gl.h>
-#include <GL/glut.h>
 #include <cmath>
-
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <GL/glut.h>
 
 #include "tinyxml2.h"
 
