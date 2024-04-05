@@ -28,6 +28,7 @@ if  (WIN32)
 	
 	include_directories(${TOOLKITS_FOLDER}/glut )
 	target_link_libraries(${PROJECT_NAME} ${OPENGL_LIBRARIES} ${TOOLKITS_FOLDER}/glut/glut32.lib)
+	target_link_libraries(generator ${OPENGL_LIBRARIES} ${TOOLKITS_FOLDER}/glut/glut32.lib)
 	
 	if (EXISTS "${TOOLKITS_FOLDER}/glut/glut32.dll" )
 		file(COPY ${TOOLKITS_FOLDER}/glut/glut32.dll DESTINATION ${CMAKE_BINARY_DIR})

@@ -17,7 +17,9 @@ then
 ./generator cone 1 2 4 3 ../3d/cone_1_2_4_3.3d &&
         echo "./generator cone 1 2 4 3 ../3d/cone_1_2_4_3.3d";
 ./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d &&
-        echo "./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d"
+        echo "./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d";
+./generator sphere 1 10 10 ../3d/sphere.3d &&
+        echo "./generator sphere 1 10 10 ../3d/sphere.3d"
 else 
 echo "Wrong option (available: 1, 2)"
 fi
