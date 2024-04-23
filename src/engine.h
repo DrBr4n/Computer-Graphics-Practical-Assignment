@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 
-#include "tinyxml2.h"
+#include <GL/glew.h>
 #include <GL/glut.h>
+
+#include "tinyxml2.h"
 
 using namespace tinyxml2;
 
@@ -48,7 +50,11 @@ int parseConfig(const char *config);
 
 struct Group *parseGroup(XMLElement *pGroupElem);
 
+void getGroupModels(struct Group *group);
+
 std::vector<struct Vector3D> parseModels(std::vector<std::string> modelNames);
+
+void genVBOs();
 
 void drawAxes();
 

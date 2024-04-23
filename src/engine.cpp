@@ -8,6 +8,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include <GL/glew.h>
 #include <GL/glut.h>
 
 #include "tinyxml2.h"
@@ -16,9 +17,13 @@ using namespace tinyxml2;
 
 struct Config *gpConfigData = new Config();
 struct Group *gpGroupRoot = NULL;
+std::vector<std::string> gModels;
+GLuint *gBuffers;
 
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
+  getGroupModels(gpGroupRoot);
+  // genVBOs();
   // radius is not correct to camera position
   gpConfigData->radius = 5.0f;
   // asin(xmlInfo.camPos.y / xmlInfo.radius);
@@ -42,6 +47,7 @@ int main(int argc, char **argv) {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glEnableClientState(GL_VERTEX_ARRAY);
 
   // Enter GLUT's main cycle
   glutMainLoop();
@@ -246,6 +252,44 @@ std::vector<struct Vector3D> parseModels(std::vector<std::string> modelNames) {
     File.close();
   }
   return points;
+}
+
+void getGroupModels(struct Group *group) {
+  for (const auto &model : group->models) {
+    gModels.push_back(model);
+  }
+  for (struct Group child : group->children) {
+    getGroupModels(&child);
+  }
+}
+
+void genVBOs() {
+  // TODO: clear gModels duplicates
+
+  glGenBuffers(gModels.size(), gBuffers);
+  int i = 0;
+  for (const auto &model : gModels) {
+    std::vector<float> vertex;
+    float x, y, z;
+    std::ifstream File("../3d/" + model);
+    std::string line;
+
+    while (getline(File, line)) {
+      std::istringstream lineStream(line);
+      lineStream >> x;
+      lineStream >> y;
+      lineStream >> z;
+      vertex.push_back(x);
+      vertex.push_back(y);
+      vertex.push_back(z);
+    }
+
+    File.close();
+
+    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[i++]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertex.size(), vertex.data(),
+                 GL_STATIC_DRAW);
+  }
 }
 
 void drawAxes() {
