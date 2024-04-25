@@ -38,6 +38,12 @@ struct Group {
   std::vector<struct Vector3D> points;
 };
 
+struct VBOsInfo {
+  int bufferIndex;
+  int vertexCount;
+  std::string modelName;
+};
+
 void changeSize(int w, int h);
 
 void renderScene(void);

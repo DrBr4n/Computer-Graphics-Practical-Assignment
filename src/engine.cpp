@@ -1,6 +1,8 @@
 #include "engine.h"
 
+#include <algorithm>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,18 +20,12 @@ using namespace tinyxml2;
 struct Config *gpConfigData = new Config();
 struct Group *gpGroupRoot = NULL;
 std::vector<std::string> gModels;
-GLuint *gBuffers;
+// NOTE: try to get gBuffers to be *gBuffers
+GLuint gBuffers[20];
+std::vector<struct VBOsInfo> gVBOsInfo;
 
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
-  getGroupModels(gpGroupRoot);
-  // genVBOs();
-  // radius is not correct to camera position
-  gpConfigData->radius = 5.0f;
-  // asin(xmlInfo.camPos.y / xmlInfo.radius);
-  gpConfigData->beta = 0;
-  // asin(xmlInfo.camPos.x / (xmlInfo.radius * cos(xmlInfo.beta)));
-  gpConfigData->alfa = 0;
 
   // Init GLUT and the window
   glutInit(&argc, argv);
@@ -43,11 +39,23 @@ int main(int argc, char **argv) {
   glutReshapeFunc(changeSize);
   glutSpecialFunc(processSpecialKeys);
 
+  glewInit();
+
   // OpenGL settings
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glEnableClientState(GL_VERTEX_ARRAY);
+
+  getGroupModels(gpGroupRoot);
+  genVBOs();
+
+  // radius is not correct to camera position
+  gpConfigData->radius = 5.0f;
+  // asin(xmlInfo.camPos.y / xmlInfo.radius);
+  gpConfigData->beta = 0;
+  // asin(xmlInfo.camPos.x / (xmlInfo.radius * cos(xmlInfo.beta)));
+  gpConfigData->alfa = 0;
 
   // Enter GLUT's main cycle
   glutMainLoop();
@@ -94,8 +102,6 @@ void renderScene(void) {
 
   // Draw
   drawAxes();
-
-  glColor3f(1.0f, 1.0f, 1.0f);
 
   drawGroup(gpGroupRoot);
 
@@ -264,14 +270,18 @@ void getGroupModels(struct Group *group) {
 }
 
 void genVBOs() {
-  // TODO: clear gModels duplicates
+  std::sort(gModels.begin(), gModels.end());
+  gModels.erase(unique(gModels.begin(), gModels.end()), gModels.end());
 
   glGenBuffers(gModels.size(), gBuffers);
-  int i = 0;
-  for (const auto &model : gModels) {
+
+  int bufferIdx = 0;
+  for (const auto &modelName : gModels) {
+
     std::vector<float> vertex;
-    float x, y, z;
-    std::ifstream File("../3d/" + model);
+    float x, y, z, vertexCounter = 0;
+
+    std::ifstream File("../3d/" + modelName);
     std::string line;
 
     while (getline(File, line)) {
@@ -282,13 +292,20 @@ void genVBOs() {
       vertex.push_back(x);
       vertex.push_back(y);
       vertex.push_back(z);
+      vertexCounter += 3;
     }
-
     File.close();
 
-    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[i++]);
+    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertex.size(), vertex.data(),
                  GL_STATIC_DRAW);
+
+    struct VBOsInfo VBOsInfoNode;
+    VBOsInfoNode.bufferIndex = bufferIdx;
+    bufferIdx += 1;
+    VBOsInfoNode.vertexCount = vertexCounter;
+    VBOsInfoNode.modelName = modelName;
+    gVBOsInfo.push_back(VBOsInfoNode);
   }
 }
 
@@ -310,6 +327,8 @@ void drawAxes() {
   glVertex3f(0.0f, 0.0f, -100.0f);
   glVertex3f(0.0f, 0.0f, 100.0f);
   glEnd();
+
+  glColor3f(1.0f, 1.0f, 1.0f);
 }
 
 void drawGroup(struct Group *group) {
@@ -328,13 +347,22 @@ void drawGroup(struct Group *group) {
     }
   }
 
-  group->points = parseModels(group->models);
-
-  glBegin(GL_TRIANGLES);
-  for (const auto &point : group->points) {
-    glVertex3f(point.x, point.y, point.z);
+  // group->points = parseModels(group->models);
+  //
+  // glBegin(GL_TRIANGLES);
+  // for (const auto &point : group->points) {
+  //   glVertex3f(point.x, point.y, point.z);
+  // }
+  // glEnd();
+  for (const auto &modelName : group->models) {
+    for (const auto &vboInfo : gVBOsInfo) {
+      if (modelName == vboInfo.modelName) {
+        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.bufferIndex]);
+        glVertexPointer(3, GL_FLOAT, 0, 0);
+        glDrawArrays(GL_TRIANGLES, 0, vboInfo.vertexCount);
+      }
+    }
   }
-  glEnd();
 
   for (struct Group child : group->children) {
     glPushMatrix();
