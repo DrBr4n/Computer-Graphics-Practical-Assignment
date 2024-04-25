@@ -198,21 +198,51 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
   if ((pElem = pGroupElem->FirstChildElement("transform")) != NULL) {
     for (pElem = pElem->FirstChildElement(); pElem != NULL;
          pElem = pElem->NextSiblingElement()) {
-      Vector3D newVector;
-      pElem->QueryFloatAttribute("x", &newVector.x);
-      pElem->QueryFloatAttribute("y", &newVector.y);
-      pElem->QueryFloatAttribute("z", &newVector.z);
-      const char *transformType = pElem->Name();
-      if (std::strcmp(transformType, "translate") == 0) {
-        pGroup->orderOfTransformations.emplace_back(1);
-        pGroup->translate = newVector;
-      } else if (std::strcmp(transformType, "rotate") == 0) {
-        pGroup->orderOfTransformations.emplace_back(2);
-        pElem->QueryFloatAttribute("angle", &pGroup->angle);
-        pGroup->rotate = newVector;
-      } else if (std::strcmp(transformType, "scale") == 0) {
-        pGroup->orderOfTransformations.emplace_back(3);
-        pGroup->scale = newVector;
+
+      if (pElem->FindAttribute("time") == 0) {
+        Vector3D newVector;
+        pElem->QueryFloatAttribute("x", &newVector.x);
+        pElem->QueryFloatAttribute("y", &newVector.y);
+        pElem->QueryFloatAttribute("z", &newVector.z);
+        const char *transformType = pElem->Name();
+        if (std::strcmp(transformType, "translate") == 0) {
+          pGroup->orderOfTransformations.emplace_back(1);
+          pGroup->translate = newVector;
+        } else if (std::strcmp(transformType, "rotate") == 0) {
+          pGroup->orderOfTransformations.emplace_back(2);
+          pElem->QueryFloatAttribute("angle", &pGroup->angle);
+          pGroup->rotate = newVector;
+        } else if (std::strcmp(transformType, "scale") == 0) {
+          pGroup->orderOfTransformations.emplace_back(3);
+          pGroup->scale = newVector;
+        }
+      }
+
+      // time dependant transform
+      else {
+        const char *transformType = pElem->Name();
+        if (std::strcmp(transformType, "translate") == 0) {
+          pGroup->orderOfTransformations.emplace_back(1);
+          pElem->QueryIntAttribute("time", &pGroup->time);
+          pElem->QueryBoolAttribute("align", &pGroup->align);
+          XMLElement *pPointList = pElem->FirstChildElement();
+          // NOTE: max curve points = 4 atm
+          for (int i = 0; i < 4; i++) {
+            pPointList->QueryFloatAttribute("x", &pGroup->curvePoints[i][0]);
+            pPointList->QueryFloatAttribute("y", &pGroup->curvePoints[i][1]);
+            pPointList->QueryFloatAttribute("z", &pGroup->curvePoints[i][2]);
+            pPointList = pPointList->NextSiblingElement();
+          }
+
+        } else if (std::strcmp(transformType, "rotate") == 0) {
+          pGroup->orderOfTransformations.emplace_back(2);
+          Vector3D newVector;
+          pElem->QueryIntAttribute("time", &pGroup->time);
+          pElem->QueryFloatAttribute("x", &newVector.x);
+          pElem->QueryFloatAttribute("y", &newVector.y);
+          pElem->QueryFloatAttribute("z", &newVector.z);
+          pGroup->rotate = newVector;
+        }
       }
     }
   }
@@ -226,8 +256,8 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
     }
   }
 
-  // Create a child for every group child of current group and emplace it in the
-  // current group children vector
+  // Create a child for every group child of current group and emplace it in
+  // the current group children vector
   struct Group *pChild = NULL;
   for (pGroupElem = pGroupElem->FirstChildElement("group"); pGroupElem != NULL;
        pGroupElem = pGroupElem->NextSiblingElement("group")) {

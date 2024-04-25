@@ -36,6 +36,9 @@ struct Group {
   std::vector<int> orderOfTransformations;
   std::vector<std::string> models;
   std::vector<struct Vector3D> points;
+  int time;
+  bool align;
+  float curvePoints[4][3];
 };
 
 struct VBOsInfo {
