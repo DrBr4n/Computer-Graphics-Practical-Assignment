@@ -25,6 +25,9 @@ std::vector<std::string> gModels;
 GLuint gBuffers[20];
 std::vector<struct VBOsInfo> gVBOsInfo;
 
+float gPrevY[3] = {0, -1, 0};
+float gInstant = 0;
+
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
 
@@ -37,6 +40,7 @@ int main(int argc, char **argv) {
 
   // Required callback registry
   glutDisplayFunc(renderScene);
+  glutIdleFunc(renderScene);
   glutReshapeFunc(changeSize);
   glutSpecialFunc(processSpecialKeys);
 
@@ -105,6 +109,8 @@ void renderScene(void) {
   drawAxes();
 
   drawGroup(gpGroupRoot);
+
+  gInstant += 0.001;
 
   // End of frame
   glutSwapBuffers();
@@ -203,7 +209,6 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
       const char *transformType = pElem->Name();
       if ((std::strcmp(transformType, "translate") == 0) &&
           pElem->FindAttribute("time") != 0) {
-        std::cout << "entered" << pElem->Name();
         pGroup->orderOfTransformations.emplace_back(1);
         pElem->QueryIntAttribute("time", &pGroup->translateTime);
         pElem->QueryBoolAttribute("align", &pGroup->align);
@@ -357,11 +362,26 @@ void drawGroup(struct Group *group) {
   for (const auto &order : group->orderOfTransformations) {
     switch (order) {
     case 1:
-      glTranslatef(group->translate.x, group->translate.y, group->translate.z);
+      if (group->translateTime == 0) {
+        glTranslatef(group->translate.x, group->translate.y,
+                     group->translate.z);
+      } else {
+        float pos[3];
+        float deriv[3];
+        renderCatmullRomCurve(group->curvePoints);
+        getGlobalCatmullRomPoint(gInstant, pos, deriv, group->curvePoints);
+        glTranslatef(pos[0], pos[1], pos[2]);
+      }
       break;
     case 2:
-      glRotatef(group->angle, group->rotate.x, group->rotate.y,
-                group->rotate.z);
+      if (group->rotateTime == 0) {
+        glRotatef(group->angle, group->rotate.x, group->rotate.y,
+                  group->rotate.z);
+      } else {
+        float t = (glutGet(GLUT_ELAPSED_TIME)) / ((float)1000);
+        glRotatef((t / group->rotateTime) * 360, group->rotate.x,
+                  group->rotate.y, group->rotate.z);
+      }
       break;
     case 3:
       glScalef(group->scale.x, group->scale.y, group->scale.z);
@@ -369,13 +389,6 @@ void drawGroup(struct Group *group) {
     }
   }
 
-  // group->points = parseModels(group->models);
-  //
-  // glBegin(GL_TRIANGLES);
-  // for (const auto &point : group->points) {
-  //   glVertex3f(point.x, point.y, point.z);
-  // }
-  // glEnd();
   for (const auto &modelName : group->models) {
     for (const auto &vboInfo : gVBOsInfo) {
       if (modelName == vboInfo.modelName) {
@@ -391,4 +404,113 @@ void drawGroup(struct Group *group) {
     drawGroup(&child);
     glPopMatrix();
   }
+}
+
+// Curves
+float length(float *v) {
+  float res = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  return res;
+}
+
+void normalize(float *a) {
+  float l = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+  a[0] = a[0] / l;
+  a[1] = a[1] / l;
+  a[2] = a[2] / l;
+}
+
+void cross(float *a, float *b, float *res) {
+  res[0] = a[1] * b[2] - a[2] * b[1];
+  res[1] = a[2] * b[0] - a[0] * b[2];
+  res[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+void buildRotMatrix(float *x, float *y, float *z, float *m) {
+  m[0] = x[0];
+  m[1] = x[1];
+  m[2] = x[2];
+  m[3] = 0;
+  m[4] = y[0];
+  m[5] = y[1];
+  m[6] = y[2];
+  m[7] = 0;
+  m[8] = z[0];
+  m[9] = z[1];
+  m[10] = z[2];
+  m[11] = 0;
+  m[12] = 0;
+  m[13] = 0;
+  m[14] = 0;
+  m[15] = 1;
+}
+
+void multMatrixVector(float *m, float *v, float *res) {
+  for (int j = 0; j < 4; ++j) {
+    res[j] = 0;
+    for (int k = 0; k < 4; ++k) {
+      res[j] += v[k] * m[j * 4 + k];
+    }
+  }
+}
+
+void getCatmullRomPoint(float t, std::vector<struct Vector3D> pointsVector,
+                        float *pos, float *deriv) {
+  // catmull-rom matrix
+  float m[4][4] = {{-0.5f, 1.5f, -1.5f, 0.5f},
+                   {1.0f, -2.5f, 2.0f, -0.5f},
+                   {-0.5f, 0.0f, 0.5f, 0.0f},
+                   {0.0f, 1.0f, 0.0f, 0.0f}};
+
+  float p[3][4] = {{pointsVector[0].x, pointsVector[1].x, pointsVector[2].x,
+                    pointsVector[3].x},
+                   {pointsVector[0].y, pointsVector[1].y, pointsVector[2].y,
+                    pointsVector[3].y},
+                   {pointsVector[0].z, pointsVector[1].z, pointsVector[2].z,
+                    pointsVector[3].z}};
+  for (int i = 0; i < 3; i++) {
+    float a[4];
+    // compute A = M * P
+    multMatrixVector((float *)m, p[i], a);
+    // compute pos = T * A
+    pos[i] = pow(t, 3.0) * a[0] + pow(t, 2.0) * a[1] + t * a[2] + a[3];
+    // compute deriv = T' * A
+    deriv[i] = 3 * pow(t, 2.0) * a[0] + 2 * t * a[1] + a[2];
+  }
+}
+
+// given global t, returns the point in the curve
+void getGlobalCatmullRomPoint(float gt, float *pos, float *deriv,
+                              std::vector<struct Vector3D> curvePoints) {
+  int pointCount = curvePoints.size();
+  float t = gt * pointCount; // this is the real global t
+  int index = floor(t);      // which segment
+  t = t - index;             // where within the segment
+
+  // indexes store the points
+  int indexes[4];
+  indexes[0] = (index + pointCount - 1) % pointCount;
+  indexes[1] = (indexes[0] + 1) % pointCount;
+  indexes[2] = (indexes[1] + 1) % pointCount;
+  indexes[3] = (indexes[2] + 1) % pointCount;
+
+  // TODO: check this and create apropriate vector
+  std::vector<struct Vector3D> pointsVector = {
+      curvePoints[indexes[0]], curvePoints[indexes[1]], curvePoints[indexes[2]],
+      curvePoints[indexes[3]]};
+
+  getCatmullRomPoint(t, pointsVector, pos, deriv);
+}
+
+void renderCatmullRomCurve(std::vector<struct Vector3D> curvePoints) {
+  // Draw curve using line segments with GL_LINE_LOOP
+  float tesselation = 100;
+  float pos[3];
+  float deriv[3];
+
+  glBegin(GL_LINE_LOOP);
+  for (int gt = 0; gt < tesselation; gt++) {
+    getGlobalCatmullRomPoint(gt / tesselation, pos, deriv, curvePoints);
+    glVertex3f(pos[0], pos[1], pos[2]);
+  }
+  glEnd();
 }

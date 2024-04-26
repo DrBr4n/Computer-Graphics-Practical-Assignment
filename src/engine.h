@@ -70,4 +70,22 @@ void drawAxes();
 
 void drawGroup(struct Group *group);
 
+float length(float *v);
+
+void normalize(float *a);
+
+void cross(float *a, float *b, float *res);
+
+void buildRotMatrix(float *x, float *y, float *z, float *m);
+
+void multMatrixVector(float *m, float *v, float *res);
+
+void getCatmullRomPoint(float t, std::vector<struct Vector3D> pointsVector,
+                        float *pos, float *deriv);
+
+void getGlobalCatmullRomPoint(float gt, float *pos, float *deriv,
+                              std::vector<struct Vector3D> curvePoints);
+
+void renderCatmullRomCurve(std::vector<struct Vector3D> curvePoints);
+
 #endif
