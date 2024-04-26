@@ -35,10 +35,11 @@ struct Group {
   GLfloat angle;
   std::vector<int> orderOfTransformations;
   std::vector<std::string> models;
-  std::vector<struct Vector3D> points;
-  int time;
+  // std::vector<struct Vector3D> points;
+  int translateTime;
+  int rotateTime;
   bool align;
-  float curvePoints[4][3];
+  std::vector<struct Vector3D> curvePoints;
 };
 
 struct VBOsInfo {

@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -199,49 +200,40 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
     for (pElem = pElem->FirstChildElement(); pElem != NULL;
          pElem = pElem->NextSiblingElement()) {
 
-      if (pElem->FindAttribute("time") == 0) {
+      const char *transformType = pElem->Name();
+      if ((std::strcmp(transformType, "translate") == 0) &&
+          pElem->FindAttribute("time") != 0) {
+        std::cout << "entered" << pElem->Name();
+        pGroup->orderOfTransformations.emplace_back(1);
+        pElem->QueryIntAttribute("time", &pGroup->translateTime);
+        pElem->QueryBoolAttribute("align", &pGroup->align);
+        for (XMLElement *pPointList = pElem->FirstChildElement();
+             pPointList != NULL;
+             pPointList = pPointList->NextSiblingElement()) {
+          Vector3D newVector;
+          pPointList->QueryFloatAttribute("x", &newVector.x);
+          pPointList->QueryFloatAttribute("y", &newVector.y);
+          pPointList->QueryFloatAttribute("z", &newVector.z);
+          pGroup->curvePoints.push_back(newVector);
+        }
+      } else {
         Vector3D newVector;
         pElem->QueryFloatAttribute("x", &newVector.x);
         pElem->QueryFloatAttribute("y", &newVector.y);
         pElem->QueryFloatAttribute("z", &newVector.z);
-        const char *transformType = pElem->Name();
         if (std::strcmp(transformType, "translate") == 0) {
           pGroup->orderOfTransformations.emplace_back(1);
           pGroup->translate = newVector;
         } else if (std::strcmp(transformType, "rotate") == 0) {
           pGroup->orderOfTransformations.emplace_back(2);
-          pElem->QueryFloatAttribute("angle", &pGroup->angle);
+          if (pElem->FindAttribute("time") == 0)
+            pElem->QueryFloatAttribute("angle", &pGroup->angle);
+          else
+            pElem->QueryIntAttribute("time", &pGroup->rotateTime);
           pGroup->rotate = newVector;
         } else if (std::strcmp(transformType, "scale") == 0) {
           pGroup->orderOfTransformations.emplace_back(3);
           pGroup->scale = newVector;
-        }
-      }
-
-      // time dependant transform
-      else {
-        const char *transformType = pElem->Name();
-        if (std::strcmp(transformType, "translate") == 0) {
-          pGroup->orderOfTransformations.emplace_back(1);
-          pElem->QueryIntAttribute("time", &pGroup->time);
-          pElem->QueryBoolAttribute("align", &pGroup->align);
-          XMLElement *pPointList = pElem->FirstChildElement();
-          // NOTE: max curve points = 4 atm
-          for (int i = 0; i < 4; i++) {
-            pPointList->QueryFloatAttribute("x", &pGroup->curvePoints[i][0]);
-            pPointList->QueryFloatAttribute("y", &pGroup->curvePoints[i][1]);
-            pPointList->QueryFloatAttribute("z", &pGroup->curvePoints[i][2]);
-            pPointList = pPointList->NextSiblingElement();
-          }
-
-        } else if (std::strcmp(transformType, "rotate") == 0) {
-          pGroup->orderOfTransformations.emplace_back(2);
-          Vector3D newVector;
-          pElem->QueryIntAttribute("time", &pGroup->time);
-          pElem->QueryFloatAttribute("x", &newVector.x);
-          pElem->QueryFloatAttribute("y", &newVector.y);
-          pElem->QueryFloatAttribute("z", &newVector.z);
-          pGroup->rotate = newVector;
         }
       }
     }
