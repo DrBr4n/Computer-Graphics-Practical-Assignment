@@ -1,3 +1,6 @@
+#include "engine.h"
+#include <algorithm>
+#include <iostream>
 #ifdef _WIN32
 #include <string>
 #else
@@ -5,7 +8,9 @@
 #endif
 
 #include <fstream>
+#include <sstream>
 #include <vector>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -303,6 +308,116 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
   }
 }
 
+struct Vector3D bezierFormula(float t, std::vector<struct Vector3D> p) {
+  struct Vector3D result;
+  // Bernstein Polinomials
+  float bp03 = (1 - t) * (1 - t) * (1 - t);
+  float bp13 = 3 * t * ((1 - t) * (1 - t));
+  float bp23 = 3 * (t * t) * (1 - t);
+  float bp33 = t * t * t;
+
+  // Cubic Bezier curve formula
+  result.x = bp33 * p[3].x + bp23 * p[2].x + bp13 * p[1].x + bp03 * p[0].x;
+  result.y = bp33 * p[3].y + bp23 * p[2].y + bp13 * p[1].y + bp03 * p[0].y;
+  result.z = bp33 * p[3].z + bp23 * p[2].z + bp13 * p[1].z + bp03 * p[0].z;
+  return result;
+}
+
+struct Vector3D bezierPatch(float u, float v, std::vector<int> indexes,
+                            std::vector<struct Vector3D> points) {
+  struct Vector3D result;
+  result.x = 0;
+  result.y = 0;
+  result.z = 0;
+  std::vector<struct Vector3D> controlPoints;
+  std::vector<struct Vector3D> bezierPoints;
+
+  for (int i = 0; i < 16; i++) {
+    // loadControl
+    controlPoints.push_back(points[indexes[i]]);
+
+    if (controlPoints.size() == 4) {
+      bezierPoints.push_back(bezierFormula(u, controlPoints));
+      controlPoints.clear();
+    }
+  }
+  result = bezierFormula(v, bezierPoints);
+  return result;
+}
+
+void genBezier(char *inFileName, int tesselation, char *outFileName) {
+
+  std::ifstream inFile(inFileName);
+  std::ofstream outFile(outFileName, std::ios::trunc);
+  std::string line;
+
+  std::vector<std::vector<int>> indexesVector;
+  std::vector<struct Vector3D> points;
+
+  getline(inFile, line);
+  std::istringstream nPatchesStream(line);
+  int nPatches = 0;
+  nPatchesStream >> nPatches;
+
+  for (int i = 0; i < nPatches; i++) {
+    getline(inFile, line);
+    std::replace(line.begin(), line.end(), ',', ' ');
+    std::istringstream indexStream(line);
+    std::vector<int> indexes;
+    for (int j = 0; j < 16; j++) {
+      int index;
+      indexStream >> index;
+      indexes.push_back(index);
+    }
+    indexesVector.push_back(indexes);
+  }
+
+  getline(inFile, line);
+  std::istringstream nPointsStream(line);
+  int nPoints = 0;
+  nPointsStream >> nPoints;
+
+  for (int i = 0; i < nPoints; i++) {
+    getline(inFile, line);
+    std::replace(line.begin(), line.end(), ',', ' ');
+    std::istringstream pointStream(line);
+    struct Vector3D newPoint;
+    pointStream >> newPoint.x;
+    pointStream >> newPoint.y;
+    pointStream >> newPoint.z;
+    points.push_back(newPoint);
+  }
+
+  for (int patch = 0; patch < nPatches; patch++) {
+    for (int lin = 0; lin < tesselation; lin++) {
+      for (int col = 0; col < tesselation; col++) {
+
+        float x1 = (float)lin / tesselation;
+        float y1 = (float)col / tesselation;
+        float x2 = (float)(lin + 1) / tesselation;
+        float y2 = (float)(col + 1) / tesselation;
+
+        struct Vector3D end1, end2, end3, end4;
+        end1 = bezierPatch(x1, y1, indexesVector[patch], points);
+        end2 = bezierPatch(x1, y2, indexesVector[patch], points);
+        end3 = bezierPatch(x2, y1, indexesVector[patch], points);
+        end4 = bezierPatch(x2, y2, indexesVector[patch], points);
+
+        outFile << end1.x << " " << end1.y << " " << end1.z << "\n";
+        outFile << end2.x << " " << end2.y << " " << end2.z << "\n";
+        outFile << end4.x << " " << end4.y << " " << end4.z << "\n";
+
+        outFile << end1.x << " " << end1.y << " " << end1.z << "\n";
+        outFile << end4.x << " " << end4.y << " " << end4.z << "\n";
+        outFile << end3.x << " " << end3.y << " " << end3.z << "\n";
+      }
+    }
+  }
+
+  inFile.close();
+  outFile.close();
+}
+
 int main(int argc, char *argv[]) {
 
   if (strcmp(argv[1], "plane") == 0) {
@@ -315,6 +430,8 @@ int main(int argc, char *argv[]) {
   } else if (strcmp(argv[1], "sphere") == 0) {
     genSphere(std::stof(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]),
               argv[5]);
+  } else if (strcmp(argv[1], "bezier") == 0) {
+    genBezier(argv[2], std::stoi(argv[3]), argv[4]);
   }
   return 0;
 }

@@ -25,7 +25,7 @@ std::vector<std::string> gModels;
 GLuint gBuffers[20];
 std::vector<struct VBOsInfo> gVBOsInfo;
 
-float gPrevY[3] = {0, -1, 0};
+float gPrevY[3] = {0, 1, 0};
 
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
