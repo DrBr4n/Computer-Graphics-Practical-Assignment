@@ -26,7 +26,6 @@ GLuint gBuffers[20];
 std::vector<struct VBOsInfo> gVBOsInfo;
 
 float gPrevY[3] = {0, -1, 0};
-float gInstant = 0;
 
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
@@ -109,8 +108,6 @@ void renderScene(void) {
   drawAxes();
 
   drawGroup(gpGroupRoot);
-
-  gInstant += 0.001;
 
   // End of frame
   glutSwapBuffers();
@@ -366,11 +363,32 @@ void drawGroup(struct Group *group) {
         glTranslatef(group->translate.x, group->translate.y,
                      group->translate.z);
       } else {
+        // walk on the curve
+        float curTime = (glutGet(GLUT_ELAPSED_TIME) / ((float)1000));
         float pos[3];
         float deriv[3];
+        float t = (group->curvePoints.size() + curTime) / group->translateTime;
         renderCatmullRomCurve(group->curvePoints);
-        getGlobalCatmullRomPoint(gInstant, pos, deriv, group->curvePoints);
+        getGlobalCatmullRomPoint(t, pos, deriv, group->curvePoints);
         glTranslatef(pos[0], pos[1], pos[2]);
+
+        // align with the curve
+        if (group->align == 1) {
+          float x[3], z[3];
+          float y[3] = {0, 1, 0};
+          x[0] = deriv[0];
+          x[1] = deriv[1];
+          x[2] = deriv[2];
+          normalize(x);
+          cross(x, gPrevY, z);
+          normalize(z);
+          cross(z, x, gPrevY);
+          normalize(gPrevY);
+
+          float m[4][4];
+          buildRotMatrix(x, gPrevY, z, (float *)m);
+          glMultMatrixf((float *)m);
+        }
       }
       break;
     case 2:
@@ -378,8 +396,8 @@ void drawGroup(struct Group *group) {
         glRotatef(group->angle, group->rotate.x, group->rotate.y,
                   group->rotate.z);
       } else {
-        float t = (glutGet(GLUT_ELAPSED_TIME)) / ((float)1000);
-        glRotatef((t / group->rotateTime) * 360, group->rotate.x,
+        float curTime = (glutGet(GLUT_ELAPSED_TIME)) / ((float)1000);
+        glRotatef((curTime / group->rotateTime) * 360, group->rotate.x,
                   group->rotate.y, group->rotate.z);
       }
       break;
@@ -478,7 +496,6 @@ void getCatmullRomPoint(float t, std::vector<struct Vector3D> pointsVector,
   }
 }
 
-// given global t, returns the point in the curve
 void getGlobalCatmullRomPoint(float gt, float *pos, float *deriv,
                               std::vector<struct Vector3D> curvePoints) {
   int pointCount = curvePoints.size();
