@@ -20,10 +20,11 @@ using namespace tinyxml2;
 
 struct Config *gpConfigData = new Config();
 struct Group *gpGroupRoot = NULL;
-std::vector<std::string> gModels;
-// NOTE: try to get gBuffers to be *gBuffers
+std::vector<std::string> gModelNames;
 GLuint gBuffers[20];
 std::vector<struct VBOsInfo> gVBOsInfo;
+std::vector<struct Model> gModels;
+std::vector<struct Light> gLights;
 
 float gPrevY[3] = {0, 1, 0};
 
@@ -48,7 +49,7 @@ int main(int argc, char **argv) {
   // OpenGL settings
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glEnableClientState(GL_VERTEX_ARRAY);
 
   getGroupModels(gpGroupRoot);
@@ -186,6 +187,35 @@ int parseConfig(const char *config) {
   pListElem->QueryDoubleAttribute("near", &gpConfigData->near);
   pListElem->QueryDoubleAttribute("far", &gpConfigData->far);
 
+  Vector3D posVector = {0.0, 0.0, 0.0};
+  Vector3D dirVector = {0.0, 0.0, 0.0};
+  pElem = pRoot->FirstChildElement("lights");
+  pListElem = pElem->FirstChildElement("light");
+  for (; pListElem != NULL; pListElem = pListElem->NextSiblingElement()) {
+    struct Light pNewLight;
+    const char *type = nullptr;
+    pListElem->QueryStringAttribute("type", &type);
+    pNewLight.type = type;
+    if (std::strcmp(pNewLight.type.data(), "point") == 0 ||
+        std::strcmp(pNewLight.type.data(), "spot") == 0) {
+      pListElem->QueryFloatAttribute("posx", &posVector.x);
+      pListElem->QueryFloatAttribute("posy", &posVector.y);
+      pListElem->QueryFloatAttribute("posz", &posVector.z);
+      pNewLight.pos = posVector;
+    }
+    if (std::strcmp(pNewLight.type.data(), "directional") == 0 ||
+        std::strcmp(pNewLight.type.data(), "spot") == 0) {
+      pListElem->QueryFloatAttribute("dirx", &dirVector.x);
+      pListElem->QueryFloatAttribute("diry", &dirVector.y);
+      pListElem->QueryFloatAttribute("dirz", &dirVector.z);
+      pNewLight.dir = dirVector;
+    }
+    if (std::strcmp(pNewLight.type.data(), "spot") == 0) {
+      pListElem->QueryIntAttribute("cutoff", &pNewLight.cutoff);
+    }
+    gLights.push_back(pNewLight);
+  }
+
   XMLElement *pGroup = pRoot->FirstChildElement("group");
   if (pGroup != NULL) {
     gpGroupRoot = parseGroup(pGroup);
@@ -244,9 +274,49 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
   // Check if <models> exists, if so use for loop to retrieve first model
   // and iterate over its siblings
   if ((pElem = pGroupElem->FirstChildElement("models")) != NULL) {
+    XMLElement *pListElem, *pColorElem;
+    const char *lightComp[4] = {"diffuse", "ambient", "specular", "emissive"};
+
     for (pElem = pElem->FirstChildElement("model"); pElem != NULL;
          pElem = pElem->NextSiblingElement("model")) {
-      pGroup->models.emplace_back(pElem->FindAttribute("file")->Value());
+      pGroup->modelNames.emplace_back(pElem->FindAttribute("file")->Value());
+
+      struct Model *pNewModel = new Model();
+      const char *name = nullptr;
+      pElem->QueryStringAttribute("file", &name);
+      pNewModel->name = name;
+
+      if (pElem->FirstChildElement("texture") != NULL) {
+        pListElem = pElem->FirstChildElement("texture");
+        const char *texture = nullptr;
+        pListElem->QueryStringAttribute("file", &texture);
+        pNewModel->texture = texture;
+      } else {
+        pNewModel->texture = "EMPTY";
+      }
+
+      if (pElem->FirstChildElement("color") != NULL) {
+        pListElem = pElem->FirstChildElement("color");
+        for (int i = 0; i < 4; i++) {
+          pColorElem = pListElem->FirstChildElement(lightComp[i]);
+          pColorElem->QueryFloatAttribute("R", &pNewModel->lightComp[i][0]);
+          pColorElem->QueryFloatAttribute("G", &pNewModel->lightComp[i][1]);
+          pColorElem->QueryFloatAttribute("B", &pNewModel->lightComp[i][2]);
+        }
+        pColorElem = pListElem->FirstChildElement("shininess");
+        pColorElem->QueryFloatAttribute("value", &pNewModel->shininess);
+      } else {
+        GLfloat defLightComp[4][3] = {
+            {200, 200, 200}, {50, 50, 50}, {0, 0, 0}, {0, 0, 0}};
+        for (int i = 0; i < 4; i++) {
+          for (int j = 0; j < 3; j++) {
+            pNewModel->lightComp[i][j] = defLightComp[i][j];
+          }
+        }
+        pNewModel->shininess = 0;
+      }
+      gModels.push_back(*pNewModel);
+      delete pNewModel;
     }
   }
 
@@ -285,8 +355,8 @@ std::vector<struct Vector3D> parseModels(std::vector<std::string> modelNames) {
 }
 
 void getGroupModels(struct Group *group) {
-  for (const auto &model : group->models) {
-    gModels.push_back(model);
+  for (const auto &model : group->modelNames) {
+    gModelNames.push_back(model);
   }
   for (struct Group child : group->children) {
     getGroupModels(&child);
@@ -294,13 +364,14 @@ void getGroupModels(struct Group *group) {
 }
 
 void genVBOs() {
-  std::sort(gModels.begin(), gModels.end());
-  gModels.erase(unique(gModels.begin(), gModels.end()), gModels.end());
+  std::sort(gModelNames.begin(), gModelNames.end());
+  gModelNames.erase(unique(gModelNames.begin(), gModelNames.end()),
+                    gModelNames.end());
 
-  glGenBuffers(gModels.size(), gBuffers);
+  glGenBuffers(gModelNames.size(), gBuffers);
 
   int bufferIdx = 0;
-  for (const auto &modelName : gModels) {
+  for (const auto &modelName : gModelNames) {
 
     std::vector<float> vertex;
     float x, y, z, vertexCounter = 0;
@@ -407,7 +478,7 @@ void drawGroup(struct Group *group) {
     }
   }
 
-  for (const auto &modelName : group->models) {
+  for (const auto &modelName : group->modelNames) {
     for (const auto &vboInfo : gVBOsInfo) {
       if (modelName == vboInfo.modelName) {
         glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.bufferIndex]);

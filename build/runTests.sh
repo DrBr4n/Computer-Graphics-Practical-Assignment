@@ -14,6 +14,14 @@ then
 ./engine ../tests/test_files_phase_2/test_2_3.xml;
 ./engine ../tests/test_files_phase_2/test_2_4.xml;
 ./engine ../tests/test_files_phase_2/solar_system.xml
-else 
-echo "Wrong option (available: 1, 2)"
+elif [ $1 == 4 ]
+then
+./engine ../tests/test_files_phase_4/test_4_1.xml;
+./engine ../tests/test_files_phase_4/test_4_2.xml;
+./engine ../tests/test_files_phase_4/test_4_3.xml;
+./engine ../tests/test_files_phase_4/test_4_4.xml;
+./engine ../tests/test_files_phase_4/test_4_5.xml;
+./engine ../tests/test_files_phase_4/test_4_6.xml;
+else
+echo "Wrong option (available: 1, 2, 4)"
 fi

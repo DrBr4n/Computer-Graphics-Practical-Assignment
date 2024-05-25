@@ -34,8 +34,7 @@ struct Group {
   Vector3D rotate;
   GLfloat angle;
   std::vector<int> orderOfTransformations;
-  std::vector<std::string> models;
-  // std::vector<struct Vector3D> points;
+  std::vector<std::string> modelNames;
   int translateTime;
   int rotateTime;
   bool align;
@@ -46,6 +45,21 @@ struct VBOsInfo {
   int bufferIndex;
   int vertexCount;
   std::string modelName;
+};
+
+struct Light {
+  std::string type;
+  Vector3D pos;
+  Vector3D dir;
+  int cutoff;
+};
+
+struct Model {
+  std::string name;
+  std::string texture;
+  // [diffuse, ambient, specular, emissive]
+  GLfloat lightComp[4][3];
+  GLfloat shininess;
 };
 
 void changeSize(int w, int h);
