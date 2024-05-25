@@ -42,7 +42,8 @@ struct Group {
 };
 
 struct VBOsInfo {
-  int bufferIndex;
+  int vertexBufferIndex;
+  int normalBufferIndex;
   int vertexCount;
   std::string modelName;
 };
@@ -101,5 +102,9 @@ void getGlobalCatmullRomPoint(float gt, float *pos, float *deriv,
                               std::vector<struct Vector3D> curvePoints);
 
 void renderCatmullRomCurve(std::vector<struct Vector3D> curvePoints);
+
+void initLights();
+
+void setupLights();
 
 #endif

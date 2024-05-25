@@ -20,6 +20,18 @@ then
         echo "./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d";
 ./generator sphere 1 10 10 ../3d/sphere.3d &&
         echo "./generator sphere 1 10 10 ../3d/sphere.3d"
+elif [ $1 == 4 ]
+then
+./generator plane 2 3 ../3d/plane_2_3.3d &&
+        echo "./generator plane 2 3 ../3d/plane_2_3.3d"
+./generator box 2 3 ../3d/box_2_3.3d &&
+        echo "./generator box 2 3 ../3d/box_2_3.3d";
+./generator cone 1 2 4 3 ../3d/cone_1_2_4_3.3d &&
+        echo "./generator cone 1 2 4 3 ../3d/cone_1_2_4_3.3d";
+./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d &&
+        echo "./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d";
+./generator bezier ../src/teapot.patch 10 ../3d/bezier_10.3d &&
+        echo "./generator bezier ../src/teapot.patch 10 ../3d/bezier_10.3d";
 else 
-echo "Wrong option (available: 1, 2)"
+echo "Wrong option (available: 1, 2, 4)"
 fi

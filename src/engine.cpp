@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   glEnable(GL_CULL_FACE);
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glEnableClientState(GL_VERTEX_ARRAY);
+  glEnableClientState(GL_NORMAL_ARRAY);
 
   getGroupModels(gpGroupRoot);
   genVBOs();
@@ -61,6 +62,8 @@ int main(int argc, char **argv) {
   gpConfigData->beta = 0;
   // asin(xmlInfo.camPos.x / (xmlInfo.radius * cos(xmlInfo.beta)));
   gpConfigData->alfa = 0;
+
+  initLights();
 
   // Enter GLUT's main cycle
   glutMainLoop();
@@ -104,6 +107,8 @@ void renderScene(void) {
             gpConfigData->camPos.z, gpConfigData->lookAt.x,
             gpConfigData->lookAt.y, gpConfigData->lookAt.z, gpConfigData->up.x,
             gpConfigData->up.y, gpConfigData->up.z);
+
+  setupLights();
 
   // Draw
   drawAxes();
@@ -332,28 +337,6 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
   return pGroup;
 }
 
-std::vector<struct Vector3D> parseModels(std::vector<std::string> modelNames) {
-  std::vector<struct Vector3D> points;
-  // NOTE: Might be a bug
-  Vector3D point;
-
-  for (const auto &modelName : modelNames) {
-    std::ifstream File("../3d/" + modelName);
-    std::string line;
-
-    while (getline(File, line)) {
-      std::istringstream lineStream(line);
-      lineStream >> point.x;
-      lineStream >> point.y;
-      lineStream >> point.z;
-      points.push_back(point);
-    }
-
-    File.close();
-  }
-  return points;
-}
-
 void getGroupModels(struct Group *group) {
   for (const auto &model : group->modelNames) {
     gModelNames.push_back(model);
@@ -368,13 +351,13 @@ void genVBOs() {
   gModelNames.erase(unique(gModelNames.begin(), gModelNames.end()),
                     gModelNames.end());
 
-  glGenBuffers(gModelNames.size(), gBuffers);
+  glGenBuffers(gModelNames.size() * 2, gBuffers);
 
   int bufferIdx = 0;
   for (const auto &modelName : gModelNames) {
 
-    std::vector<float> vertex;
-    float x, y, z, vertexCounter = 0;
+    std::vector<float> vertex, normals;
+    float x, y, z, nx, ny, nz;
 
     std::ifstream File("../3d/" + modelName);
     std::string line;
@@ -387,24 +370,35 @@ void genVBOs() {
       vertex.push_back(x);
       vertex.push_back(y);
       vertex.push_back(z);
-      vertexCounter += 3;
+      lineStream >> nx;
+      lineStream >> ny;
+      lineStream >> nz;
+      normals.push_back(nx);
+      normals.push_back(ny);
+      normals.push_back(nz);
     }
     File.close();
 
-    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx]);
+    struct VBOsInfo VBOsInfoNode;
+    VBOsInfoNode.modelName = modelName;
+    VBOsInfoNode.vertexCount = vertex.size();
+
+    VBOsInfoNode.vertexBufferIndex = bufferIdx;
+    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx++]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertex.size(), vertex.data(),
                  GL_STATIC_DRAW);
 
-    struct VBOsInfo VBOsInfoNode;
-    VBOsInfoNode.bufferIndex = bufferIdx;
-    bufferIdx += 1;
-    VBOsInfoNode.vertexCount = vertexCounter;
-    VBOsInfoNode.modelName = modelName;
+    VBOsInfoNode.normalBufferIndex = bufferIdx;
+    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx++]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * normals.size(),
+                 normals.data(), GL_STATIC_DRAW);
+
     gVBOsInfo.push_back(VBOsInfoNode);
   }
 }
 
 void drawAxes() {
+  glDisable(GL_LIGHTING);
   glBegin(GL_LINES);
 
   // X axis in red
@@ -424,6 +418,7 @@ void drawAxes() {
   glEnd();
 
   glColor3f(1.0f, 1.0f, 1.0f);
+  glEnable(GL_LIGHTING);
 }
 
 void drawGroup(struct Group *group) {
@@ -481,8 +476,21 @@ void drawGroup(struct Group *group) {
   for (const auto &modelName : group->modelNames) {
     for (const auto &vboInfo : gVBOsInfo) {
       if (modelName == vboInfo.modelName) {
-        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.bufferIndex]);
+        for (const auto &model : gModels) {
+          if (modelName == model.name) {
+            // glMaterialfv(GL_FRONT, GL_DIFFUSE, model.lightComp[0]);
+            // glMaterialfv(GL_FRONT, GL_AMBIENT, model.lightComp[1]);
+            // glMaterialfv(GL_FRONT, GL_SPECULAR, model.lightComp[2]);
+            // glMaterialfv(GL_FRONT, GL_EMISSION, model.lightComp[3]);
+            // glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
+          }
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.vertexBufferIndex]);
         glVertexPointer(3, GL_FLOAT, 0, 0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.normalBufferIndex]);
+        glNormalPointer(GL_FLOAT, 0, 0);
+
         glDrawArrays(GL_TRIANGLES, 0, vboInfo.vertexCount);
       }
     }
@@ -601,4 +609,46 @@ void renderCatmullRomCurve(std::vector<struct Vector3D> curvePoints) {
     glVertex3f(pos[0], pos[1], pos[2]);
   }
   glEnd();
+}
+
+// Lights
+void initLights() {
+  glEnable(GL_LIGHTING);
+
+  float dark[4] = {0.2, 0.2, 0.2, 1.0};
+  float white[4] = {1.0, 1.0, 1.0, 1.0};
+  float black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+  for (int i = 0; i < gLights.size(); i++) {
+    glEnable(GL_LIGHT0 + i);
+    glLightfv(GL_LIGHT0 + i, GL_AMBIENT, dark);
+    glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, white);
+    glLightfv(GL_LIGHT0 + i, GL_SPECULAR, white);
+  }
+
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, black);
+}
+
+void setupLights() {
+  for (int i = 0; i < gLights.size(); i++) {
+    if (std::strcmp(gLights[i].type.data(), "point") == 0) {
+      const GLfloat pos[4] = {gLights[i].pos.x, gLights[i].pos.y,
+                              gLights[i].pos.z, 1};
+      glLightfv(GL_LIGHT0 + i, GL_POSITION, pos);
+
+    } else if (std::strcmp(gLights[i].type.data(), "directional") == 0) {
+      const GLfloat dir[4] = {gLights[i].dir.x, gLights[i].dir.y,
+                              gLights[i].dir.z, 0};
+      glLightfv(GL_LIGHT0 + i, GL_POSITION, dir);
+
+    } else if (std::strcmp(gLights[i].type.data(), "spot") == 0) {
+      const GLfloat pos[4] = {gLights[i].pos.x, gLights[i].pos.y,
+                              gLights[i].pos.z, 1};
+      const GLfloat dir[3] = {gLights[i].dir.x, gLights[i].dir.y,
+                              gLights[i].dir.z};
+      glLightfv(GL_LIGHT0 + i, GL_POSITION, pos);
+      glLightfv(GL_LIGHT0 + i, GL_SPOT_DIRECTION, dir);
+      glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, gLights[i].cutoff);
+    }
+  }
 }

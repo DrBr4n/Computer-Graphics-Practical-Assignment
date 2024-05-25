@@ -32,21 +32,27 @@ void genPlane(float length, int divisions, char *fileName) {
     fixDiv = 1;
     ofset = length / 2;
   }
+  const char *normal = " 1 0 0";
 
   for (int i = -divisions / 2 - fixDiv; i < divisions / 2; i++) {
     for (int j = -divisions / 2 - fixDiv; j < divisions / 2; j++) {
-      File << length * j + ofset << " " << 0.0f << " " << length * i + ofset
-           << std::endl;
+      File << length * j + ofset << " " << 0.0f << " " << length * i + ofset;
+      File << normal << "\n";
       File << length * j + ofset << " " << 0.0f << " "
-           << length * (i + 1) + ofset << std::endl;
+           << length * (i + 1) + ofset;
+      File << normal << "\n";
       File << length * (j + 1) + ofset << " " << 0.0f << " "
-           << length * i + ofset << std::endl;
+           << length * i + ofset;
+      File << normal << "\n";
       File << length * j + ofset << " " << 0.0f << " "
-           << length * (i + 1) + ofset << std::endl;
+           << length * (i + 1) + ofset;
+      File << normal << "\n";
       File << length * (j + 1) + ofset << " " << 0.0f << " "
-           << length * (i + 1) + ofset << std::endl;
+           << length * (i + 1) + ofset;
+      File << normal << "\n";
       File << length * (j + 1) + ofset << " " << 0.0f << " "
-           << length * i + ofset << std::endl;
+           << length * i + ofset;
+      File << normal << "\n";
     }
   }
   File.close();
@@ -54,23 +60,30 @@ void genPlane(float length, int divisions, char *fileName) {
 
 void genBox(float length, int divisions, char *fileName) {
   std::ofstream File(fileName, std::ios::trunc);
-
+  const char *normals[6] = {" 0 -1 0", " 0 1 0", " 0 0 1",
+                            " 0 0 -1", " 1 0 0", " -1 0 0"};
   float start = -length / 2.0f;
   // BASE
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << j * (length / divisions) + start << " " << start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[0] << "\n";
       File << j * (length / divisions) + start << " " << start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[0] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[0] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[0] << "\n";
       File << j * (length / divisions) + start << " " << start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[0] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[0] << "\n";
     }
   }
 
@@ -78,17 +91,23 @@ void genBox(float length, int divisions, char *fileName) {
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << j * (length / divisions) + start << " " << -start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[1] << "\n";
       File << j * (length / divisions) + start << " " << -start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[1] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << -start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[1] << "\n";
       File << j * (length / divisions) + start << " " << -start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[1] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << -start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[1] << "\n";
       File << (j + 1) * (length / divisions) + start << " " << -start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[1] << "\n";
     }
   }
 
@@ -96,20 +115,23 @@ void genBox(float length, int divisions, char *fileName) {
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << -start << std::endl;
+           << i * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
       File << (j + 1) * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << -start << std::endl;
+           << i * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
       File << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << -start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
       File << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << -start << std::endl;
+           << i * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
       File << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << -start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
       File << j * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << -start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << -start;
+      File << normals[2] << "\n";
     }
   }
 
@@ -117,20 +139,23 @@ void genBox(float length, int divisions, char *fileName) {
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << (j + 1) * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << start << std::endl;
+           << i * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
       File << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << start << std::endl;
+           << i * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
       File << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
       File << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
       File << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << " " << start << std::endl;
+           << i * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
       File << j * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << " " << start
-           << std::endl;
+           << (i + 1) * (length / divisions) + start << " " << start;
+      File << normals[3] << "\n";
     }
   }
 
@@ -138,17 +163,23 @@ void genBox(float length, int divisions, char *fileName) {
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << -start << " " << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[4] << "\n";
       File << -start << " " << (j + 1) * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[4] << "\n";
       File << -start << " " << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[4] << "\n";
       File << -start << " " << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[4] << "\n";
       File << -start << " " << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[4] << "\n";
       File << -start << " " << j * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[4] << "\n";
     }
   }
 
@@ -156,17 +187,23 @@ void genBox(float length, int divisions, char *fileName) {
   for (int i = 0; i < divisions; i++) {
     for (int j = 0; j < divisions; j++) {
       File << start << " " << (j + 1) * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[5] << "\n";
       File << start << " " << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[5] << "\n";
       File << start << " " << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[5] << "\n";
       File << start << " " << (j + 1) * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[5] << "\n";
       File << start << " " << j * (length / divisions) + start << " "
-           << i * (length / divisions) + start << std::endl;
+           << i * (length / divisions) + start;
+      File << normals[5] << "\n";
       File << start << " " << j * (length / divisions) + start << " "
-           << (i + 1) * (length / divisions) + start << std::endl;
+           << (i + 1) * (length / divisions) + start;
+      File << normals[5] << "\n";
     }
   }
 }
@@ -256,24 +293,30 @@ void genCone(float radius, float height, int slices, int stacks,
 void genSphere(float radius, int slices, int stacks, char *fileName) {
   std::ofstream File(fileName, std::ios::trunc);
 
-  std::vector<Point3D> spherePoints;
+  std::vector<Point3D> spherePoints, normals;
   float sliceAngle, stackAngle;
   float sliceStep = 2 * M_PI / slices;
   float stackStep = M_PI / stacks;
-  Point3D point;
+  Point3D point, normal;
+  float lenInv = 1.0f / radius;
 
   for (int i = 0; i <= stacks; i++) {
     stackAngle = M_PI / 2 - i * stackStep;
     point.y = radius * sinf(stackAngle);
+    normal.y = point.y * lenInv;
     for (int j = 0; j <= slices; j++) {
       sliceAngle = j * sliceStep;
       point.x = (radius * cosf(stackAngle)) * sinf(sliceAngle);
       point.z = (radius * cosf(stackAngle)) * cosf(sliceAngle);
       spherePoints.push_back(point);
+
+      normal.x = point.x * lenInv;
+      normal.z = point.z * lenInv;
+      normals.push_back(normal);
     }
   }
 
-  Point3D p1, p2, p3, p4;
+  Point3D p1, p2, p3, p4, n1, n2, n3, n4;
   int pi1, pi2;
   for (int i = 0; i < stacks; i++) {
     pi1 = i * (slices + 1);
@@ -286,23 +329,39 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
       p2 = spherePoints[pi2];
       p3 = spherePoints[pi1 + 1];
       p4 = spherePoints[pi2 + 1];
+      n1 = normals[pi1];
+      n2 = normals[pi2];
+      n3 = normals[pi1 + 1];
+      n1 = normals[pi2 + 1];
 
       if (i == 0) { // Top stack
-        File << p1.x << " " << p1.y << " " << p1.z << std::endl;
-        File << p2.x << " " << p2.y << " " << p2.z << std::endl;
-        File << p4.x << " " << p4.y << " " << p4.z << std::endl;
+        File << p1.x << " " << p1.y << " " << p1.z;
+        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << p2.x << " " << p2.y << " " << p2.z;
+        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << p4.x << " " << p4.y << " " << p4.z;
+        File << " " << n4.x << " " << n4.y << " " << n4.z << "\n";
       } else if (i == (stacks - 1)) { // Bottom Stack
-        File << p1.x << " " << p1.y << " " << p1.z << std::endl;
-        File << p2.x << " " << p2.y << " " << p2.z << std::endl;
-        File << p3.x << " " << p3.y << " " << p3.z << std::endl;
+        File << p1.x << " " << p1.y << " " << p1.z;
+        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << p2.x << " " << p2.y << " " << p2.z;
+        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << p3.x << " " << p3.y << " " << p3.z;
+        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
       } else { // The other stacks need 2 triangles
-        File << p3.x << " " << p3.y << " " << p3.z << std::endl;
-        File << p1.x << " " << p1.y << " " << p1.z << std::endl;
-        File << p2.x << " " << p2.y << " " << p2.z << std::endl;
+        File << p3.x << " " << p3.y << " " << p3.z;
+        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
+        File << p1.x << " " << p1.y << " " << p1.z;
+        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << p2.x << " " << p2.y << " " << p2.z;
+        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
 
-        File << p3.x << " " << p3.y << " " << p3.z << std::endl;
-        File << p2.x << " " << p2.y << " " << p2.z << std::endl;
-        File << p4.x << " " << p4.y << " " << p4.z << std::endl;
+        File << p3.x << " " << p3.y << " " << p3.z;
+        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
+        File << p2.x << " " << p2.y << " " << p2.z;
+        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << p4.x << " " << p4.y << " " << p4.z;
+        File << " " << n4.x << " " << n4.y << " " << n4.z << "\n";
       }
     }
   }
