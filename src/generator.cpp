@@ -1,6 +1,7 @@
 #include "engine.h"
 #include <algorithm>
 #include <iostream>
+#include <utility>
 #ifdef _WIN32
 #include <string>
 #else
@@ -32,27 +33,60 @@ void genPlane(float length, int divisions, char *fileName) {
     fixDiv = 1;
     ofset = length / 2;
   }
-  const char *normal = " 1 0 0";
+  const char *normal = " 1 0 0 ";
+  const char *coord = {};
+  float divInv = 1 / (float)divisions;
 
+  std::vector<float> texCoords;
+  for (int i = 0; i < divisions; i++) {
+    for (int j = 0; j < divisions; j++) {
+      texCoords.push_back(j * divInv);
+      texCoords.push_back(i * divInv);
+      texCoords.push_back(j * divInv);
+      texCoords.push_back((i + 1) * divInv);
+      texCoords.push_back((j + 1) * divInv);
+      texCoords.push_back(i * divInv);
+      texCoords.push_back(j * divInv);
+      texCoords.push_back((i + 1) * divInv);
+      texCoords.push_back((j + 1) * divInv);
+      texCoords.push_back((i + 1) * divInv);
+      texCoords.push_back((j + 1) * divInv);
+      texCoords.push_back(i * divInv);
+    }
+  }
+
+  int idx = 0;
   for (int i = -divisions / 2 - fixDiv; i < divisions / 2; i++) {
-    for (int j = -divisions / 2 - fixDiv; j < divisions / 2; j++) {
+    for (int j = -divisions / 2 - fixDiv, idx = 0; j < divisions / 2; j++) {
+
       File << length * j + ofset << " " << 0.0f << " " << length * i + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
+
       File << length * j + ofset << " " << 0.0f << " "
            << length * (i + 1) + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
+
       File << length * (j + 1) + ofset << " " << 0.0f << " "
            << length * i + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
+
       File << length * j + ofset << " " << 0.0f << " "
            << length * (i + 1) + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
+
       File << length * (j + 1) + ofset << " " << 0.0f << " "
            << length * (i + 1) + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
+
       File << length * (j + 1) + ofset << " " << 0.0f << " "
            << length * i + ofset;
-      File << normal << "\n";
+      File << normal;
+      File << texCoords[idx++] << " " << texCoords[idx++] << "\n";
     }
   }
   File.close();
@@ -294,7 +328,8 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
   std::ofstream File(fileName, std::ios::trunc);
 
   std::vector<Point3D> spherePoints, normals;
-  float sliceAngle, stackAngle;
+  std::vector<std::pair<float, float>> texCoords;
+  float sliceAngle, stackAngle, s, t;
   float sliceStep = 2 * M_PI / slices;
   float stackStep = M_PI / stacks;
   Point3D point, normal;
@@ -313,10 +348,16 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
       normal.x = point.x * lenInv;
       normal.z = point.z * lenInv;
       normals.push_back(normal);
+
+      s = (float)j / slices;
+      t = (float)i / stacks;
+      texCoords.push_back(std::make_pair(s, t));
     }
   }
 
   Point3D p1, p2, p3, p4, n1, n2, n3, n4;
+  std::pair<float, float> t1, t2, t3, t4;
+  std::reverse(texCoords.begin(), texCoords.end());
   int pi1, pi2;
   for (int i = 0; i < stacks; i++) {
     pi1 = i * (slices + 1);
@@ -333,35 +374,51 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
       n2 = normals[pi2];
       n3 = normals[pi1 + 1];
       n4 = normals[pi2 + 1];
+      t1 = texCoords[pi1];
+      t2 = texCoords[pi2];
+      t3 = texCoords[pi1 + 1];
+      t4 = texCoords[pi2 + 1];
 
       if (i == 0) { // Top stack
         File << p1.x << " " << p1.y << " " << p1.z;
-        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << " " << n1.x << " " << n1.y << " " << n1.z;
+        File << " " << t1.first << " " << t1.second << "\n";
         File << p2.x << " " << p2.y << " " << p2.z;
-        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << " " << n2.x << " " << n2.y << " " << n2.z;
+        File << " " << t2.first << " " << t2.second << "\n";
         File << p4.x << " " << p4.y << " " << p4.z;
-        File << " " << n4.x << " " << n4.y << " " << n4.z << "\n";
+        File << " " << n4.x << " " << n4.y << " " << n4.z;
+        File << " " << t4.first << " " << t4.second << "\n";
       } else if (i == (stacks - 1)) { // Bottom Stack
         File << p1.x << " " << p1.y << " " << p1.z;
-        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << " " << n1.x << " " << n1.y << " " << n1.z;
+        File << " " << t1.first << " " << t1.second << "\n";
         File << p2.x << " " << p2.y << " " << p2.z;
-        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << " " << n2.x << " " << n2.y << " " << n2.z;
+        File << " " << t2.first << " " << t2.second << "\n";
         File << p3.x << " " << p3.y << " " << p3.z;
-        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
+        File << " " << n3.x << " " << n3.y << " " << n3.z;
+        File << " " << t3.first << " " << t3.second << "\n";
       } else { // The other stacks need 2 triangles
         File << p3.x << " " << p3.y << " " << p3.z;
-        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
+        File << " " << n3.x << " " << n3.y << " " << n3.z;
+        File << " " << t3.first << " " << t3.second << "\n";
         File << p1.x << " " << p1.y << " " << p1.z;
-        File << " " << n1.x << " " << n1.y << " " << n1.z << "\n";
+        File << " " << n1.x << " " << n1.y << " " << n1.z;
+        File << " " << t1.first << " " << t1.second << "\n";
         File << p2.x << " " << p2.y << " " << p2.z;
-        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << " " << n2.x << " " << n2.y << " " << n2.z;
+        File << " " << t2.first << " " << t2.second << "\n";
 
         File << p3.x << " " << p3.y << " " << p3.z;
-        File << " " << n3.x << " " << n3.y << " " << n3.z << "\n";
+        File << " " << n3.x << " " << n3.y << " " << n3.z;
+        File << " " << t3.first << " " << t3.second << "\n";
         File << p2.x << " " << p2.y << " " << p2.z;
-        File << " " << n2.x << " " << n2.y << " " << n2.z << "\n";
+        File << " " << n2.x << " " << n2.y << " " << n2.z;
+        File << " " << t2.first << " " << t2.second << "\n";
         File << p4.x << " " << p4.y << " " << p4.z;
-        File << " " << n4.x << " " << n4.y << " " << n4.z << "\n";
+        File << " " << n4.x << " " << n4.y << " " << n4.z;
+        File << " " << t4.first << " " << t4.second << "\n";
       }
     }
   }

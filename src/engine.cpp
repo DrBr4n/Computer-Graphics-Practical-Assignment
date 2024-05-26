@@ -11,6 +11,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include <IL/il.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
 
@@ -34,7 +36,7 @@ int main(int argc, char **argv) {
   // Init GLUT and the window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-  glutInitWindowPosition(100, 100);
+  glutInitWindowPosition(100, 1200);
   glutInitWindowSize(gpConfigData->winWidth, gpConfigData->winHeight);
   glutCreateWindow(argv[1]);
 
@@ -52,6 +54,8 @@ int main(int argc, char **argv) {
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_NORMAL_ARRAY);
+  glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+  // glEnable(GL_RESCALE_NORMAL);
 
   getGroupModels(gpGroupRoot);
   genVBOs();
@@ -64,6 +68,7 @@ int main(int argc, char **argv) {
   gpConfigData->alfa = 0;
 
   initLights();
+  initAndLoadTextures();
 
   // Enter GLUT's main cycle
   glutMainLoop();
@@ -351,13 +356,13 @@ void genVBOs() {
   gModelNames.erase(unique(gModelNames.begin(), gModelNames.end()),
                     gModelNames.end());
 
-  glGenBuffers(gModelNames.size() * 2, gBuffers);
+  glGenBuffers(gModelNames.size() * 3, gBuffers);
 
   int bufferIdx = 0;
   for (const auto &modelName : gModelNames) {
 
-    std::vector<float> vertex, normals;
-    float x, y, z, nx, ny, nz;
+    std::vector<float> vertex, normals, textures;
+    float x, y, z, nx, ny, nz, s, t;
 
     std::ifstream File("../3d/" + modelName);
     std::string line;
@@ -376,6 +381,10 @@ void genVBOs() {
       normals.push_back(nx);
       normals.push_back(ny);
       normals.push_back(nz);
+      lineStream >> s;
+      lineStream >> t;
+      textures.push_back(s);
+      textures.push_back(t);
     }
     File.close();
 
@@ -392,6 +401,11 @@ void genVBOs() {
     glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx++]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * normals.size(),
                  normals.data(), GL_STATIC_DRAW);
+
+    VBOsInfoNode.texBufferIndex = bufferIdx;
+    glBindBuffer(GL_ARRAY_BUFFER, gBuffers[bufferIdx++]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * textures.size(),
+                 textures.data(), GL_STATIC_DRAW);
 
     gVBOsInfo.push_back(VBOsInfoNode);
   }
@@ -483,15 +497,24 @@ void drawGroup(struct Group *group) {
             // glMaterialfv(GL_FRONT, GL_SPECULAR, model.lightComp[2]);
             // glMaterialfv(GL_FRONT, GL_EMISSION, model.lightComp[3]);
             // glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
+
+            glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.vertexBufferIndex]);
+            glVertexPointer(3, GL_FLOAT, 0, 0);
+
+            glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.normalBufferIndex]);
+            glNormalPointer(GL_FLOAT, 0, 0);
+
+            if (std::strcmp(model.texture.data(), "EMPTY") != 0) {
+              glBindTexture(GL_TEXTURE_2D, model.textureId);
+              glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.texBufferIndex]);
+              glTexCoordPointer(2, GL_FLOAT, 0, 0);
+            }
+
+            glDrawArrays(GL_TRIANGLES, 0, vboInfo.vertexCount);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
           }
         }
-        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.vertexBufferIndex]);
-        glVertexPointer(3, GL_FLOAT, 0, 0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.normalBufferIndex]);
-        glNormalPointer(GL_FLOAT, 0, 0);
-
-        glDrawArrays(GL_TRIANGLES, 0, vboInfo.vertexCount);
       }
     }
   }
@@ -651,4 +674,47 @@ void setupLights() {
       glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, gLights[i].cutoff);
     }
   }
+}
+
+void initAndLoadTextures() {
+  ilInit();
+  ilEnable(IL_ORIGIN_SET);
+  ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
+  glEnable(GL_TEXTURE_2D);
+
+  for (auto &model : gModels) {
+    if (std::strcmp(model.texture.data(), "EMPTY") != 0) {
+      model.textureId = loadTexture(model.texture);
+    }
+  }
+}
+
+int loadTexture(std::string file) {
+  unsigned int t, tw, th, texID;
+  unsigned char *texData;
+
+  ilGenImages(1, &t);
+  ilBindImage(t);
+  ilLoadImage((ILstring)file.c_str());
+  tw = ilGetInteger(IL_IMAGE_WIDTH);
+  th = ilGetInteger(IL_IMAGE_HEIGHT);
+  ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+  texData = ilGetData();
+
+  glGenTextures(1, &texID);
+
+  glBindTexture(GL_TEXTURE_2D, texID);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tw, th, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               texData);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  return texID;
 }

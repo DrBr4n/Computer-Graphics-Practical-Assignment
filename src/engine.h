@@ -44,6 +44,7 @@ struct Group {
 struct VBOsInfo {
   int vertexBufferIndex;
   int normalBufferIndex;
+  int texBufferIndex;
   int vertexCount;
   std::string modelName;
 };
@@ -58,6 +59,7 @@ struct Light {
 struct Model {
   std::string name;
   std::string texture;
+  unsigned int textureId;
   // [diffuse, ambient, specular, emissive]
   GLfloat lightComp[4][3];
   GLfloat shininess;
@@ -106,5 +108,9 @@ void renderCatmullRomCurve(std::vector<struct Vector3D> curvePoints);
 void initLights();
 
 void setupLights();
+
+void initAndLoadTextures();
+
+int loadTexture(std::string file);
 
 #endif
