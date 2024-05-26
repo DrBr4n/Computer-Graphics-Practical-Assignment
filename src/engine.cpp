@@ -497,11 +497,11 @@ void drawGroup(struct Group *group) {
                                  model.lightComp[2][2], 1.0f};
             float emission[4] = {model.lightComp[3][0], model.lightComp[3][1],
                                  model.lightComp[3][2], 1.0f};
-            glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
-            glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
-            glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
-            glMaterialfv(GL_FRONT, GL_EMISSION, emission);
-            glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
+            // glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
+            // glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
+            // glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+            // glMaterialfv(GL_FRONT, GL_EMISSION, emission);
+            // glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
 
             glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.vertexBufferIndex]);
             glVertexPointer(3, GL_FLOAT, 0, 0);
