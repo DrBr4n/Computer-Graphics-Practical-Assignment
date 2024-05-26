@@ -332,7 +332,7 @@ void genSphere(float radius, int slices, int stacks, char *fileName) {
       n1 = normals[pi1];
       n2 = normals[pi2];
       n3 = normals[pi1 + 1];
-      n1 = normals[pi2 + 1];
+      n4 = normals[pi2 + 1];
 
       if (i == 0) { // Top stack
         File << p1.x << " " << p1.y << " " << p1.z;
