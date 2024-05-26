@@ -34,7 +34,7 @@ struct Group {
   Vector3D rotate;
   GLfloat angle;
   std::vector<int> orderOfTransformations;
-  std::vector<std::string> modelNames;
+  std::vector<int> modelIds;
   int translateTime;
   int rotateTime;
   bool align;
@@ -57,6 +57,7 @@ struct Light {
 };
 
 struct Model {
+  int id;
   std::string name;
   std::string texture;
   unsigned int textureId;

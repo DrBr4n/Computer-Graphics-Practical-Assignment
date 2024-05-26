@@ -22,13 +22,13 @@ using namespace tinyxml2;
 
 struct Config *gpConfigData = new Config();
 struct Group *gpGroupRoot = NULL;
-std::vector<std::string> gModelNames;
 GLuint gBuffers[20];
 std::vector<struct VBOsInfo> gVBOsInfo;
 std::vector<struct Model> gModels;
 std::vector<struct Light> gLights;
 
 float gPrevY[3] = {0, 1, 0};
+int gModelCounter = 0;
 
 int main(int argc, char **argv) {
   parseConfig(argv[1]);
@@ -57,7 +57,6 @@ int main(int argc, char **argv) {
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   // glEnable(GL_RESCALE_NORMAL);
 
-  getGroupModels(gpGroupRoot);
   genVBOs();
 
   // radius is not correct to camera position
@@ -289,9 +288,10 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
 
     for (pElem = pElem->FirstChildElement("model"); pElem != NULL;
          pElem = pElem->NextSiblingElement("model")) {
-      pGroup->modelNames.emplace_back(pElem->FindAttribute("file")->Value());
+      pGroup->modelIds.emplace_back(gModelCounter);
 
       struct Model *pNewModel = new Model();
+      pNewModel->id = gModelCounter++;
       const char *name = nullptr;
       pElem->QueryStringAttribute("file", &name);
       pNewModel->name = name;
@@ -342,24 +342,21 @@ struct Group *parseGroup(XMLElement *pGroupElem) {
   return pGroup;
 }
 
-void getGroupModels(struct Group *group) {
-  for (const auto &model : group->modelNames) {
-    gModelNames.push_back(model);
-  }
-  for (struct Group child : group->children) {
-    getGroupModels(&child);
-  }
-}
-
 void genVBOs() {
-  std::sort(gModelNames.begin(), gModelNames.end());
-  gModelNames.erase(unique(gModelNames.begin(), gModelNames.end()),
-                    gModelNames.end());
+  // Create vector of modelNames and remove duplicates to see how many vbos are
+  // needed
+  std::vector<std::string> modelNames;
+  for (const auto &model : gModels) {
+    modelNames.push_back(model.name);
+  }
+  std::sort(modelNames.begin(), modelNames.end());
+  modelNames.erase(unique(modelNames.begin(), modelNames.end()),
+                   modelNames.end());
 
-  glGenBuffers(gModelNames.size() * 3, gBuffers);
+  glGenBuffers(modelNames.size() * 3, gBuffers);
 
   int bufferIdx = 0;
-  for (const auto &modelName : gModelNames) {
+  for (const auto &modelName : modelNames) {
 
     std::vector<float> vertex, normals, textures;
     float x, y, z, nx, ny, nz, s, t;
@@ -487,16 +484,24 @@ void drawGroup(struct Group *group) {
     }
   }
 
-  for (const auto &modelName : group->modelNames) {
-    for (const auto &vboInfo : gVBOsInfo) {
-      if (modelName == vboInfo.modelName) {
-        for (const auto &model : gModels) {
-          if (modelName == model.name) {
-            // glMaterialfv(GL_FRONT, GL_DIFFUSE, model.lightComp[0]);
-            // glMaterialfv(GL_FRONT, GL_AMBIENT, model.lightComp[1]);
-            // glMaterialfv(GL_FRONT, GL_SPECULAR, model.lightComp[2]);
-            // glMaterialfv(GL_FRONT, GL_EMISSION, model.lightComp[3]);
-            // glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
+  for (const auto &modelId : group->modelIds) {
+    for (const auto &model : gModels) {
+      if (model.id == modelId) {
+        for (const auto &vboInfo : gVBOsInfo) {
+          if (vboInfo.modelName == model.name) {
+            float diffuse[4] = {model.lightComp[0][0], model.lightComp[0][1],
+                                model.lightComp[0][2], 1.0f};
+            float ambient[4] = {model.lightComp[1][0], model.lightComp[1][1],
+                                model.lightComp[1][2], 1.0f};
+            float specular[4] = {model.lightComp[2][0], model.lightComp[2][1],
+                                 model.lightComp[2][2], 1.0f};
+            float emission[4] = {model.lightComp[3][0], model.lightComp[3][1],
+                                 model.lightComp[3][2], 1.0f};
+            glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
+            glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
+            glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+            glMaterialfv(GL_FRONT, GL_EMISSION, emission);
+            glMaterialf(GL_FRONT, GL_SHININESS, model.shininess);
 
             glBindBuffer(GL_ARRAY_BUFFER, gBuffers[vboInfo.vertexBufferIndex]);
             glVertexPointer(3, GL_FLOAT, 0, 0);

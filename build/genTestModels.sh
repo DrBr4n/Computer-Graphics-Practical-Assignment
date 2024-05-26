@@ -32,6 +32,8 @@ then
         echo "./generator sphere 1 8 8 ../3d/sphere_1_8_8.3d";
 ./generator bezier ../src/teapot.patch 10 ../3d/bezier_10.3d &&
         echo "./generator bezier ../src/teapot.patch 10 ../3d/bezier_10.3d";
+./generator sphere 1 15 15 ../3d/sphere.3d &&
+        echo "./generator sphere 1 15 15 ../3d/sphere.3d";
 else 
 echo "Wrong option (available: 1, 2, 4)"
 fi
